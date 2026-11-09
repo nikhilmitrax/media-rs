@@ -252,6 +252,11 @@ impl VideoReader {
     pub fn set_read_limit(&self, bytes: u64) -> Result<()> {
         self.opened.set_read_limit(bytes)
     }
+    /// Start a bounded request on this live cursor. Already-read setup bytes are
+    /// excluded; cancellation and earlier read-budget failures remain terminal.
+    pub fn begin_read_batch(&self, bytes: u64) -> Result<()> {
+        self.opened.begin_read_batch(bytes)
+    }
     /// Replace the cancellation predicate checked between native/demux reads.
     pub fn set_interrupt(&self, interrupt: format::ReadInterrupt) {
         self.opened.set_interrupt(interrupt);

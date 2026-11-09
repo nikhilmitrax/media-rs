@@ -63,6 +63,10 @@ enum Cursor {
     MediaGpu(media::cuda_request::CudaReader),
     NativeGpu(NativeGpu),
 }
+enum IndexedCursor {
+    Cpu(media::video_request::IndexedVideoReader),
+    Gpu(media::cuda_request::CudaIndexedVideoReader),
+}
 impl Cursor {
     fn seek(&mut self, time: Time) -> Result<()> {
         match self {
@@ -124,6 +128,7 @@ struct Handle {
     warm: bool,
     cursor: Option<Cursor>,
     index: Option<Arc<VideoIndex>>,
+    indexed_cursor: Option<IndexedCursor>,
     native_live: Arc<NativeLive>,
     width: u32,
     height: u32,
@@ -181,6 +186,7 @@ impl Handle {
             warm,
             cursor: None,
             index: None,
+            indexed_cursor: None,
             native_live: Arc::new(NativeLive::default()),
             width,
             height,
@@ -197,6 +203,24 @@ impl Handle {
         }
         if warm && matches!(backend, Backend::Indexed) {
             handle.index = Some(handle.build_index()?);
+            let request = handle
+                .session
+                .from_source(handle.source.clone())
+                .video()?
+                .with_index(handle.index.as_ref().expect("built index").clone())
+                .selection(TemporalSelection::DisplayedAt)
+                .duration_inference(DurationInference::NextTimestamp);
+            handle.indexed_cursor = Some(if gpu {
+                IndexedCursor::Gpu(
+                    request
+                        .cuda(0, gpu_limits())
+                        .on_context(handle.context.as_ref().expect("GPU context"))
+                        .decode_options(decode_options())
+                        .indexed_reader()?,
+                )
+            } else {
+                IndexedCursor::Cpu(request.indexed_reader()?)
+            });
         }
         Ok(handle)
     }
@@ -248,13 +272,16 @@ impl Handle {
                 .cuda(0, gpu_limits())
                 .on_context(self.context.as_ref().expect("GPU context"))
                 .decode_options(decode_options())
-                .sample(times)
+                .sample(times.iter().copied())
                 .selection(TemporalSelection::DisplayedAt)
                 .duration_inference(DurationInference::NextTimestamp);
             if let Some(index) = index {
                 request = request.with_index(index);
             }
-            let batch = request.read()?;
+            let batch = match &mut self.indexed_cursor {
+                Some(IndexedCursor::Gpu(reader)) => reader.read(&times)?,
+                _ => request.read()?,
+            };
             stats.decoded_frames = batch.report.decoded_frames;
             stats.source_bytes = batch.report.bytes_read;
             stats.seeks = batch.report.seeks;
@@ -264,13 +291,16 @@ impl Handle {
             }
         } else {
             let mut request = request
-                .sample(times)
+                .sample(times.iter().copied())
                 .selection(TemporalSelection::DisplayedAt)
                 .duration_inference(DurationInference::NextTimestamp);
             if let Some(index) = index {
                 request = request.with_index(index);
             }
-            let batch = request.read()?;
+            let batch = match &mut self.indexed_cursor {
+                Some(IndexedCursor::Cpu(reader)) => reader.read(&times)?,
+                _ => request.read()?,
+            };
             stats.decoded_frames = batch.report.decoded_frames;
             stats.source_bytes = batch.report.bytes_read;
             stats.seeks = batch.report.seeks;

@@ -117,7 +117,7 @@ class RustRunner:
             raise RuntimeError(bridge.error())
         raw = bridge.lib.mb_consumer_stream(self.handle)
         self.stream = torch.cuda.ExternalStream(raw) if gpu else None
-        self.reuse = ("index+context;fresh-decoder" if warm and name == "media-indexed" else
+        self.reuse = ("index+context;same-indexed-reader" if warm and name == "media-indexed" else
                       "context;fresh-decoder" if name in ("media-prefix", "media-indexed") or not warm else
                       "same-live-reader+context")
 

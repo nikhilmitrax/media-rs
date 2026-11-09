@@ -7,6 +7,7 @@
 use media_pipeline::session::{BatchReservation, HostReservation};
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::time::Instant;
 
 use media_backend_cuda::{
     ChromaSiting, CudaContext, CudaLimits, CudaTensor, CudaYuvImage, PreprocessSpec, YuvMatrix,
@@ -28,7 +29,9 @@ use media_pipeline::{
 };
 
 use crate::request::Asset;
-use crate::video_index::{IndexBuildLimits, IndexSeekLimits, IndexedTiming, VideoIndex};
+use crate::video_index::{
+    IndexBuildLimits, IndexSeekLimits, IndexedDecodeState, IndexedTiming, VideoIndex,
+};
 
 #[derive(Debug, Clone)]
 enum Target {
@@ -144,6 +147,33 @@ impl CudaVideoRequest {
     pub fn with_index(mut self, index: Arc<VideoIndex>) -> Self {
         self.index = Some(index);
         self
+    }
+    /// Open a reusable indexed GPU reader, retaining one decoder until dropped.
+    ///
+    /// Requires an explicit index. Sample times are supplied to each `read` call;
+    /// selection, duration, cancellation and work limits come from this request.
+    /// Setup reads are bounded separately from each batch's source-read budget.
+    pub fn indexed_reader(&self) -> Result<CudaIndexedVideoReader> {
+        self.indexed_limits.validate()?;
+        if self.index.is_none() {
+            return Err(Error::invalid(
+                "a reusable indexed reader requires an attached index",
+            ));
+        }
+        let mut request = self.clone();
+        request.times = None;
+        let mut reader = request.open_reader()?;
+        reader.update_report();
+        reader
+            .decoder
+            .as_ref()
+            .ok_or_else(|| Error::invalid("indexed decoder closed"))?
+            .set_read_limit(request.indexed_limits.max_source_bytes)?;
+        Ok(CudaIndexedVideoReader {
+            request,
+            reader: Some(reader),
+            state: IndexedDecodeState::default(),
+        })
     }
     /// Bound real seeks, dependency decoding and source reads for indexed batches.
     pub fn indexed_limits(mut self, limits: IndexSeekLimits) -> Self {
@@ -485,6 +515,18 @@ impl CudaVideoRequest {
         )
     }
     fn read_indexed(&self) -> Result<CudaFrameBatch> {
+        let times = self
+            .times
+            .as_deref()
+            .ok_or_else(|| Error::invalid("indexed execution requires timestamps"))?;
+        self.read_indexed_on(times, &mut None, &mut IndexedDecodeState::default())
+    }
+    fn read_indexed_on(
+        &self,
+        times: &[Time],
+        retained: &mut Option<CudaReader>,
+        state: &mut IndexedDecodeState,
+    ) -> Result<CudaFrameBatch> {
         self.validate()?;
         self.indexed_limits.validate()?;
         let index = self
@@ -496,10 +538,6 @@ impl CudaVideoRequest {
             self.options.track,
             self.options.duration_policy,
         )?;
-        let times = self
-            .times
-            .as_ref()
-            .ok_or_else(|| Error::invalid("indexed GPU batch needs timestamps"))?;
         let (output_bytes, working_bytes) =
             index.batch_metadata_bytes(times.len(), std::mem::size_of::<CudaVideoFrame>())?;
         let metadata = Arc::new(
@@ -518,12 +556,26 @@ impl CudaVideoRequest {
         let (selection, groups) =
             index.schedule(times, self.selection, self.durations, self.indexed_limits)?;
         let batch = Arc::new(self.asset.session.resources.reserve_batch()?);
-        let mut reader = self.open_reader()?;
-        reader
-            .decoder
-            .as_ref()
-            .ok_or_else(|| Error::invalid("indexed GPU decoder closed"))?
-            .set_read_limit(self.indexed_limits.max_source_bytes)?;
+        let (before_frames, before_bytes) = if let Some(reader) = retained.as_ref() {
+            let decoder = reader
+                .decoder
+                .as_ref()
+                .ok_or_else(|| Error::invalid("indexed decoder closed"))?;
+            decoder.begin_read_batch(self.indexed_limits.max_source_bytes)?;
+            (reader.report().decoded_frames, reader.report().bytes_read)
+        } else {
+            let mut reader = self.open_reader()?;
+            reader.update_report();
+            reader
+                .decoder
+                .as_ref()
+                .ok_or_else(|| Error::invalid("indexed decoder closed"))?
+                .set_read_limit(self.indexed_limits.max_source_bytes)?;
+            *retained = Some(reader);
+            (0, 0)
+        };
+        let reader = retained.as_mut().expect("indexed reader opened");
+        let before_seeks = reader.report.seeks;
         let mut unique = BTreeMap::new();
         for group in groups {
             reader.cancel.check()?;
@@ -532,23 +584,40 @@ impl CudaVideoRequest {
                 .timing
                 .source_pts
                 .ok_or_else(|| Error::incompatible("GPU index anchor lacks source PTS"))?;
-            reader
-                .decoder
-                .as_mut()
-                .ok_or_else(|| Error::invalid("indexed GPU decoder retired before seek"))?
-                .seek_indexed_keyframe(anchor_pts, anchor.seek_timestamp)?;
-            reader.report.seeks = reader
-                .report
-                .seeks
-                .checked_add(1)
-                .ok_or_else(|| Error::overflow("GPU seek count"))?;
-            let mut position = None;
-            loop {
+            let remaining = self
+                .indexed_limits
+                .max_decoded_frames
+                .saturating_sub(reader.report.decoded_frames - before_frames);
+            let mut restart = None;
+            let mut position = state.next;
+            if state.should_seek(&group, remaining) {
                 self.indexed_limits
-                    .check_decoded(reader.report.decoded_frames.saturating_add(1))?;
+                    .check_seek(reader.report.seeks - before_seeks)?;
+                restart = Some(Instant::now());
+                reader
+                    .decoder
+                    .as_mut()
+                    .ok_or_else(|| Error::invalid("indexed decoder closed"))?
+                    .seek_indexed_keyframe(anchor_pts, anchor.seek_timestamp)?;
+                reader.report.seeks = reader
+                    .report
+                    .seeks
+                    .checked_add(1)
+                    .ok_or_else(|| Error::overflow("indexed seek count"))?;
+                position = None;
+                state.next = None;
+            }
+            loop {
+                self.indexed_limits.check_decoded(
+                    (reader.report.decoded_frames - before_frames).saturating_add(1),
+                )?;
+                let started = Instant::now();
                 let frame = reader.next_frame()?.ok_or_else(|| {
                     Error::incompatible("NVDEC reached EOF before indexed GPU selection")
                 })?;
+                if restart.is_none() {
+                    state.observe_frame(started.elapsed());
+                }
                 let timing = frame.frame().timing;
                 let ordinal = match position {
                     Some(position) => position,
@@ -557,6 +626,9 @@ impl CudaVideoRequest {
                     }
                     None => continue,
                 };
+                if let Some(started) = restart.take() {
+                    state.observe_restart(started.elapsed());
+                }
                 let verified = index.check_actual(ordinal, timing, frame.keyframe())?;
                 let frame = frame.with_indexed_position(
                     verified
@@ -570,14 +642,15 @@ impl CudaVideoRequest {
                 if group.wanted.binary_search(&(ordinal as u64)).is_ok() {
                     unique.insert(ordinal as u64, frame);
                 }
+                state.next = Some(
+                    ordinal
+                        .checked_add(1)
+                        .ok_or_else(|| Error::overflow("indexed ordinal"))?,
+                );
+                position = state.next;
                 if ordinal as u64 == group.last {
                     break;
                 }
-                position = Some(
-                    ordinal
-                        .checked_add(1)
-                        .ok_or_else(|| Error::overflow("indexed GPU ordinal"))?,
-                );
             }
         }
         index.validate(
@@ -598,6 +671,9 @@ impl CudaVideoRequest {
             );
         }
         let mut report = reader.report();
+        report.decoded_frames -= before_frames;
+        report.bytes_read -= before_bytes;
+        report.seeks -= before_seeks;
         report.index_cache_hits = 1;
         Ok(CudaFrameBatch::from_native_parts(
             frames,
@@ -617,6 +693,34 @@ impl CudaVideoRequest {
             request: self,
             spec,
         }
+    }
+}
+
+/// Stateful indexed GPU sampling with one retained decoder and verified position.
+///
+/// Batches retain independent output leases. Work counters and limits apply to
+/// each call; setup is performed at construction. Any failed call closes this
+/// reader, so stale evidence or partial native state cannot be reused.
+pub struct CudaIndexedVideoReader {
+    request: CudaVideoRequest,
+    reader: Option<CudaReader>,
+    state: IndexedDecodeState,
+}
+impl CudaIndexedVideoReader {
+    /// Select this batch's timestamps in caller order, including repetitions.
+    pub fn read(&mut self, times: &[Time]) -> Result<CudaFrameBatch> {
+        if self.reader.is_none() {
+            return Err(Error::invalid(
+                "indexed reader is closed after an earlier failure",
+            ));
+        }
+        let result = self
+            .request
+            .read_indexed_on(times, &mut self.reader, &mut self.state);
+        if result.is_err() {
+            self.reader.take();
+        }
+        result
     }
 }
 

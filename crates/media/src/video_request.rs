@@ -1,6 +1,8 @@
 //! Incremental CPU video and exact caller-ordered timestamp batches.
 use crate::request::Asset;
-use crate::video_index::{IndexBuildLimits, IndexSeekLimits, IndexedTiming, VideoIndex};
+use crate::video_index::{
+    IndexBuildLimits, IndexSeekLimits, IndexedDecodeState, IndexedTiming, VideoIndex,
+};
 use media_backend_ffmpeg::{
     codec::{VideoDecodeOptions, VideoReader as Decoder},
     format::{self, AssetInfo, ProbeOptions, RemuxReport},
@@ -15,7 +17,7 @@ use media_pipeline::{
     execution::CancellationToken,
     sampling::{DurationInference, FrameIndex, FrameIndexEntry, SelectionBatch, TemporalSelection},
 };
-use std::{collections::BTreeMap, path::Path, sync::Arc};
+use std::{collections::BTreeMap, path::Path, sync::Arc, time::Instant};
 
 /// Lazy CPU video selection with explicit temporal semantics.
 #[derive(Debug, Clone)]
@@ -99,6 +101,33 @@ impl VideoRequest {
     pub fn with_index(mut self, index: Arc<VideoIndex>) -> Self {
         self.index = Some(index);
         self
+    }
+    /// Open a reusable indexed CPU reader, retaining one decoder until dropped.
+    ///
+    /// Requires an explicit index. Sample times are supplied to each `read` call;
+    /// selection, duration, cancellation and work limits come from this request.
+    /// Setup reads are bounded separately from each batch's source-read budget.
+    pub fn indexed_reader(&self) -> Result<IndexedVideoReader> {
+        self.indexed_limits.validate()?;
+        if self.index.is_none() {
+            return Err(Error::invalid(
+                "a reusable indexed reader requires an attached index",
+            ));
+        }
+        let mut request = self.clone();
+        request.times = None;
+        let mut reader = request.open_reader()?;
+        reader.update_report();
+        reader
+            .decoder
+            .as_ref()
+            .ok_or_else(|| Error::invalid("indexed decoder closed"))?
+            .set_read_limit(request.indexed_limits.max_source_bytes)?;
+        Ok(IndexedVideoReader {
+            request,
+            reader: Some(reader),
+            state: IndexedDecodeState::default(),
+        })
     }
     /// Bound actual seek/decode/source-read work for indexed executions.
     pub fn indexed_limits(mut self, limits: IndexSeekLimits) -> Self {
@@ -491,7 +520,19 @@ impl VideoRequest {
         ))
     }
     fn read_indexed(&self) -> Result<FrameBatch> {
-        let cpu = self.reserve_cpu()?;
+        let times = self
+            .times
+            .as_deref()
+            .ok_or_else(|| Error::invalid("indexed execution requires timestamps"))?;
+        self.read_indexed_on(times, &mut None, &mut IndexedDecodeState::default())
+    }
+    fn read_indexed_on(
+        &self,
+        times: &[Time],
+        retained: &mut Option<VideoReader>,
+        state: &mut IndexedDecodeState,
+    ) -> Result<FrameBatch> {
+        self.validate_cpu_threads()?;
         self.indexed_limits.validate()?;
         let index = self
             .index
@@ -502,10 +543,6 @@ impl VideoRequest {
             self.options.track,
             self.options.duration_policy,
         )?;
-        let times = self
-            .times
-            .as_ref()
-            .ok_or_else(|| Error::invalid("indexed execution requires sample times"))?;
         let (output_bytes, working_bytes) =
             index.batch_metadata_bytes(times.len(), std::mem::size_of::<VideoFrame>())?;
         let metadata = Arc::new(
@@ -524,12 +561,26 @@ impl VideoRequest {
         let (selection, groups) =
             index.schedule(times, self.selection, self.durations, self.indexed_limits)?;
         let batch = Arc::new(self.asset.session.resources.reserve_batch()?);
-        let mut reader = self.open_reader_admitted(cpu)?;
-        reader
-            .decoder
-            .as_ref()
-            .ok_or_else(|| Error::invalid("indexed decoder closed"))?
-            .set_read_limit(self.indexed_limits.max_source_bytes)?;
+        let (before_frames, before_bytes) = if let Some(reader) = retained.as_ref() {
+            let decoder = reader
+                .decoder
+                .as_ref()
+                .ok_or_else(|| Error::invalid("indexed decoder closed"))?;
+            decoder.begin_read_batch(self.indexed_limits.max_source_bytes)?;
+            (reader.report().decoded_frames, reader.report().bytes_read)
+        } else {
+            let mut reader = self.open_reader()?;
+            reader.update_report();
+            reader
+                .decoder
+                .as_ref()
+                .ok_or_else(|| Error::invalid("indexed decoder closed"))?
+                .set_read_limit(self.indexed_limits.max_source_bytes)?;
+            *retained = Some(reader);
+            (0, 0)
+        };
+        let reader = retained.as_mut().expect("indexed reader opened");
+        let before_seeks = reader.report.seeks;
         let mut unique = BTreeMap::new();
         for group in groups {
             reader.cancel.check()?;
@@ -538,23 +589,40 @@ impl VideoRequest {
                 .timing
                 .source_pts
                 .ok_or_else(|| Error::incompatible("index anchor has no source PTS"))?;
-            reader
-                .decoder
-                .as_mut()
-                .ok_or_else(|| Error::invalid("indexed decoder retired before seek"))?
-                .seek_indexed_keyframe(anchor_pts, anchor.seek_timestamp)?;
-            reader.report.seeks = reader
-                .report
-                .seeks
-                .checked_add(1)
-                .ok_or_else(|| Error::overflow("seek count"))?;
-            let mut position = None;
-            loop {
+            let remaining = self
+                .indexed_limits
+                .max_decoded_frames
+                .saturating_sub(reader.report.decoded_frames - before_frames);
+            let mut restart = None;
+            let mut position = state.next;
+            if state.should_seek(&group, remaining) {
                 self.indexed_limits
-                    .check_decoded(reader.report.decoded_frames.saturating_add(1))?;
+                    .check_seek(reader.report.seeks - before_seeks)?;
+                restart = Some(Instant::now());
+                reader
+                    .decoder
+                    .as_mut()
+                    .ok_or_else(|| Error::invalid("indexed decoder closed"))?
+                    .seek_indexed_keyframe(anchor_pts, anchor.seek_timestamp)?;
+                reader.report.seeks = reader
+                    .report
+                    .seeks
+                    .checked_add(1)
+                    .ok_or_else(|| Error::overflow("indexed seek count"))?;
+                position = None;
+                state.next = None;
+            }
+            loop {
+                self.indexed_limits.check_decoded(
+                    (reader.report.decoded_frames - before_frames).saturating_add(1),
+                )?;
+                let started = Instant::now();
                 let mut frame = reader.next_frame()?.ok_or_else(|| {
                     Error::incompatible("decoder reached EOF before indexed selection")
                 })?;
+                if restart.is_none() {
+                    state.observe_frame(started.elapsed());
+                }
                 let keyframe = reader
                     .decoder
                     .as_ref()
@@ -565,18 +633,22 @@ impl VideoRequest {
                     None if frame.timing.source_pts == Some(anchor_pts) && keyframe => group.anchor,
                     None => continue,
                 };
+                if let Some(started) = restart.take() {
+                    state.observe_restart(started.elapsed());
+                }
                 frame.timing = index.check_actual(ordinal, frame.timing, keyframe)?;
                 if group.wanted.binary_search(&(ordinal as u64)).is_ok() {
                     unique.insert(ordinal as u64, frame);
                 }
-                if ordinal as u64 == group.last {
-                    break;
-                }
-                position = Some(
+                state.next = Some(
                     ordinal
                         .checked_add(1)
                         .ok_or_else(|| Error::overflow("indexed ordinal"))?,
                 );
+                position = state.next;
+                if ordinal as u64 == group.last {
+                    break;
+                }
             }
         }
         index.validate(
@@ -597,6 +669,9 @@ impl VideoRequest {
             );
         }
         let mut report = reader.report();
+        report.decoded_frames -= before_frames;
+        report.bytes_read -= before_bytes;
+        report.seeks -= before_seeks;
         report.index_cache_hits = 1;
         report.output_frames = frames.len() as u64;
         Ok(FrameBatch::new(
@@ -610,6 +685,34 @@ impl VideoRequest {
         .retain_metadata(metadata))
     }
 }
+/// Stateful indexed CPU sampling with one retained decoder and verified position.
+///
+/// Batches retain independent output leases. Work counters and limits apply to
+/// each call; setup is performed at construction. Any failed call closes this
+/// reader, so stale evidence or partial native state cannot be reused.
+pub struct IndexedVideoReader {
+    request: VideoRequest,
+    reader: Option<VideoReader>,
+    state: IndexedDecodeState,
+}
+impl IndexedVideoReader {
+    /// Select this batch's timestamps in caller order, including repetitions.
+    pub fn read(&mut self, times: &[Time]) -> Result<FrameBatch> {
+        if self.reader.is_none() {
+            return Err(Error::invalid(
+                "indexed reader is closed after an earlier failure",
+            ));
+        }
+        let result = self
+            .request
+            .read_indexed_on(times, &mut self.reader, &mut self.state);
+        if result.is_err() {
+            self.reader.take();
+        }
+        result
+    }
+}
+
 /// Reusable CPU video work; each execution owns a fresh cursor and decoder.
 #[derive(Debug, Clone)]
 pub struct VideoPlan {

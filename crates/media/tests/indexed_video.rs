@@ -639,3 +639,265 @@ fn indexed_cuda_vfr_matches_prefix_preserves_ownership_and_enforces_work_io_and_
     assert_eq!(session.live_host_bytes(), 0);
     assert_eq!(session.live_batches(), 0);
 }
+
+#[test]
+fn reusable_indexed_reader_keeps_decoder_and_verifies_forward_backward_and_repeated_frames() {
+    let Some(fixture) = Fixture::new(6) else {
+        return;
+    };
+    let counts = ReadCounts::default();
+    let session = Session::default();
+    let base = session
+        .from_source(counted_source(&fixture, "v1", &counts))
+        .video()
+        .unwrap()
+        .duration_inference(DurationInference::NextTimestamp);
+    let index = base.build_index(IndexBuildLimits::default()).unwrap();
+    let at = |ordinal: usize| index.entries()[ordinal].pts;
+    let request = base
+        .clone()
+        .with_index(index.clone())
+        .indexed_limits(IndexSeekLimits {
+            max_decoded_frames: 6,
+            max_seeks: 1,
+            ..Default::default()
+        });
+    let mut reader = request.indexed_reader().unwrap();
+    counts.reset();
+    let first = reader.read(&[at(5), at(0), at(5), at(3)]).unwrap();
+    assert_eq!(first.report.decoded_frames, 6);
+    assert_eq!(first.report.seeks, 1);
+    assert!(
+        first.frames[0]
+            .image
+            .storage()
+            .shares_allocation(first.frames[2].image.storage())
+    );
+    let retained = first.frames[0].clone();
+    drop(first);
+    let forward_times = [at(6), at(8), at(6), at(7)];
+    let forward = reader.read(&forward_times).unwrap();
+    assert_eq!(
+        forward.report.decoded_frames, 3,
+        "work counters reset for each batch"
+    );
+    assert_eq!(
+        forward.report.seeks, 0,
+        "crossing an adjacent GOP must keep in-flight decoder work"
+    );
+    let backward = reader.read(&[at(1), at(1)]).unwrap();
+    assert_eq!(backward.report.seeks, 1);
+    assert_eq!(backward.report.decoded_frames, 2);
+    drop(backward);
+    assert_eq!(
+        counts.opens.load(Ordering::SeqCst),
+        0,
+        "sampling never reopens the source"
+    );
+    let empty = reader.read(&[]).unwrap();
+    assert_eq!(empty.report.decoded_frames, 0);
+    assert_eq!(empty.report.bytes_read, 0);
+    assert_eq!(empty.report.seeks, 0);
+    drop(empty);
+    drop(reader);
+    let expected = base.clone().sample(forward_times).read().unwrap();
+    for (actual, expected) in forward.frames.iter().zip(&expected.frames) {
+        assert_eq!(actual.timing, expected.timing);
+        assert_eq!(
+            actual.image.packed_bytes().unwrap(),
+            expected.image.packed_bytes().unwrap()
+        );
+    }
+    drop(expected);
+    let expected = base.sample([at(5)]).read().unwrap();
+    assert_eq!(
+        retained.image.packed_bytes().unwrap(),
+        expected.frames[0].image.packed_bytes().unwrap()
+    );
+}
+
+#[test]
+fn reusable_indexed_reader_bounds_each_batch_and_closes_on_cancellation_or_stale_source() {
+    let Some(fixture) = Fixture::new(6) else {
+        return;
+    };
+    let counts = ReadCounts::default();
+    let session = Session::default();
+    let source = counted_source(&fixture, "v1", &counts);
+    let base = session
+        .from_source(source)
+        .video()
+        .unwrap()
+        .duration_inference(DurationInference::NextTimestamp);
+    let index = base.build_index(IndexBuildLimits::default()).unwrap();
+    let request = base
+        .with_index(index.clone())
+        .indexed_limits(IndexSeekLimits {
+            max_source_bytes: 128 * 1024,
+            max_decoded_frames: 6,
+            ..Default::default()
+        });
+    let mut reader = request.indexed_reader().unwrap();
+    counts.reset();
+    // Alternate distant regions so cumulative native reads exceed one batch's
+    // byte cap, while every individual request remains bounded.
+    let mut total_bytes = 0;
+    for ordinal in [0, 360, 0, 360, 0, 360, 0, 360] {
+        let batch = reader.read(&[index.entries()[ordinal].pts]).unwrap();
+        assert!(batch.report.bytes_read <= 128 * 1024);
+        assert!(batch.report.decoded_frames <= 6);
+        total_bytes += batch.report.bytes_read;
+    }
+    assert!(total_bytes > 128 * 1024);
+    assert_eq!(counts.opens.load(Ordering::SeqCst), 0);
+    drop(reader);
+
+    let cancel = CancellationToken::default();
+    let mut reader = request
+        .clone()
+        .with_cancellation(cancel.clone())
+        .indexed_reader()
+        .unwrap();
+    cancel.cancel();
+    assert_eq!(
+        reader.read(&[Time::ZERO]).unwrap_err().kind(),
+        ErrorKind::Cancelled
+    );
+    assert_eq!(
+        reader.read(&[Time::ZERO]).unwrap_err().kind(),
+        ErrorKind::InvalidInput
+    );
+    assert_eq!(session.live_cpu_usage().executions, 0);
+
+    let file_request = session
+        .open(&fixture.path)
+        .unwrap()
+        .video()
+        .unwrap()
+        .duration_inference(DurationInference::NextTimestamp);
+    let file_index = file_request
+        .build_index(IndexBuildLimits::default())
+        .unwrap();
+    let mut reader = file_request
+        .with_index(file_index)
+        .indexed_reader()
+        .unwrap();
+    fs::write(&fixture.path, b"changed while the reader was retained").unwrap();
+    assert_eq!(
+        reader
+            .read(&[Time::ZERO])
+            .unwrap_err()
+            .context()
+            .constraint
+            .as_deref(),
+        Some("video_index_source")
+    );
+    assert_eq!(session.live_cpu_usage().executions, 0);
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+#[ignore = "requires NVDEC/CUDA/NVRTC; verifies retained indexed decoder and cross-batch ownership"]
+fn reusable_cuda_indexed_reader_retains_decoder_and_rebases_work_limits_per_batch() {
+    use media::backend::cuda::{CudaLimits, PreprocessSpec};
+    let fixture = Fixture::new(6).expect("requires FFmpeg fixture generator");
+    let counts = ReadCounts::default();
+    let session = Session::default();
+    let request = session
+        .from_source(counted_source(&fixture, "v1", &counts))
+        .video()
+        .unwrap()
+        .cuda(0, CudaLimits::default())
+        .duration_inference(DurationInference::NextTimestamp);
+    let index = request.build_index(IndexBuildLimits::default()).unwrap();
+    let at = |n: usize| index.entries()[n].pts;
+    let request = request
+        .with_index(index.clone())
+        .indexed_limits(IndexSeekLimits {
+            max_decoded_frames: 6,
+            max_seeks: 1,
+            ..Default::default()
+        });
+    let mut reader = request.indexed_reader().unwrap();
+    assert_eq!(session.live_cuda_codec_sessions(), 1);
+    counts.reset();
+    let first = reader.read(&[at(5), at(0), at(5)]).unwrap();
+    assert_eq!(first.report.decoded_frames, 6);
+    let frame = first.frames[0].clone();
+    let context = frame.context().clone();
+    let stream = context.stream().unwrap();
+    let spec = PreprocessSpec::new(8, 8).unwrap();
+    let values = first
+        .into_tensor(spec)
+        .unwrap()
+        .tensor
+        .download(&stream)
+        .unwrap();
+    let next = reader.read(&[at(6), at(8), at(6)]).unwrap();
+    assert_eq!(next.report.seeks, 0);
+    assert_eq!(next.report.decoded_frames, 3);
+    // Compare every component after retaining an old surface across both forward
+    // decoding and a backward seek on this same decoder.
+    let next_values = next
+        .into_tensor(spec)
+        .unwrap()
+        .tensor
+        .download(&stream)
+        .unwrap();
+    let back = reader.read(&[at(5), at(0), at(5)]).unwrap();
+    assert_eq!(back.report.seeks, 1);
+    assert_eq!(back.report.decoded_frames, 6);
+    assert_eq!(
+        back.into_tensor(spec)
+            .unwrap()
+            .tensor
+            .download(&stream)
+            .unwrap(),
+        values
+    );
+    assert_eq!(counts.opens.load(Ordering::SeqCst), 0);
+    let empty = reader.read(&[]).unwrap();
+    assert_eq!(empty.report.decoded_frames, 0);
+    assert_eq!(empty.report.bytes_read, 0);
+    drop(empty);
+    drop(reader);
+    assert_eq!(
+        frame
+            .yuv_view()
+            .unwrap()
+            .preprocess(&stream, spec)
+            .unwrap()
+            .download(&stream)
+            .unwrap(),
+        values[..3 * 8 * 8]
+    );
+    drop(frame);
+    let reference = request
+        .clone()
+        .sample([at(6), at(8), at(6)])
+        .read()
+        .unwrap();
+    assert_eq!(
+        reference
+            .into_tensor(spec)
+            .unwrap()
+            .tensor
+            .download(&stream)
+            .unwrap(),
+        next_values
+    );
+    let cancel = CancellationToken::default();
+    let mut reader = request
+        .with_cancellation(cancel.clone())
+        .indexed_reader()
+        .unwrap();
+    cancel.cancel();
+    assert_eq!(
+        reader.read(&[at(0)]).unwrap_err().kind(),
+        ErrorKind::Cancelled
+    );
+    assert_eq!(
+        reader.read(&[at(0)]).unwrap_err().kind(),
+        ErrorKind::InvalidInput
+    );
+}

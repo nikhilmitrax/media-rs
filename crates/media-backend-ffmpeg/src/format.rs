@@ -192,6 +192,21 @@ impl OpenedInput {
         self.counter.limit.store(limit, Ordering::Relaxed);
         Ok(())
     }
+    pub(crate) fn begin_read_batch(&self, bytes: u64) -> Result<()> {
+        self.check_read_budget()?;
+        if bytes == 0 {
+            return Err(Error::invalid(
+                "video batch source-read budget must be positive",
+            ));
+        }
+        let limit = self
+            .counter
+            .total
+            .load(Ordering::Relaxed)
+            .checked_add(bytes)
+            .ok_or_else(|| Error::overflow("video batch source-read budget"))?;
+        self.set_read_limit(limit)
+    }
     pub(crate) fn check_read_budget(&self) -> Result<()> {
         self.counter.check()
     }

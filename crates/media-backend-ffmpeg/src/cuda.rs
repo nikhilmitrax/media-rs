@@ -497,6 +497,11 @@ impl CudaVideoReader {
     pub fn set_read_limit(&self, bytes: u64) -> Result<()> {
         self.opened.set_read_limit(bytes)
     }
+    /// Start a bounded request on this live cursor, excluding setup/earlier reads.
+    /// Earlier cancellation or source-read failures remain terminal.
+    pub fn begin_read_batch(&self, bytes: u64) -> Result<()> {
+        self.opened.begin_read_batch(bytes)
+    }
     /// Replace the cooperative native-read cancellation predicate.
     pub fn set_interrupt(&self, interrupt: format::ReadInterrupt) {
         self.opened.set_interrupt(interrupt);

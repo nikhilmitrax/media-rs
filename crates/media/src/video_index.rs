@@ -14,7 +14,7 @@ use media_pipeline::{
     sampling::{DurationInference, FrameIndex, FrameIndexEntry, SelectionBatch, TemporalSelection},
     session::{HostReservation, Session as Resources},
 };
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
 #[path = "video_index_cache.rs"]
 mod cache;
 
@@ -53,7 +53,8 @@ impl IndexBuildLimits {
 pub struct IndexSeekLimits {
     /// Includes preroll/dependency frames and every requested GOP.
     pub max_decoded_frames: u64,
-    /// Maximum distinct keyframe-region seeks in one caller batch.
+    /// Maximum actual native seeks in one caller batch; adjacent regions may
+    /// share a decoder continuation without spending another seek.
     pub max_seeks: usize,
     /// Actual encoded bytes including header discovery, seeks and rereads.
     pub max_source_bytes: u64,
@@ -82,6 +83,13 @@ impl IndexSeekLimits {
                 "indexed video execution exceeded its decoded-frame limit",
             )
             .with_constraint("indexed_decoded_frames"));
+        }
+        Ok(())
+    }
+    pub(crate) fn check_seek(self, count: u64) -> Result<()> {
+        if count >= self.max_seeks as u64 {
+            return Err(Error::exhausted("indexed batch exceeds its seek limit")
+                .with_constraint("indexed_seeks"));
         }
         Ok(())
     }
@@ -125,6 +133,57 @@ pub(crate) struct SeekGroup {
     pub anchor: usize,
     pub wanted: Vec<u64>,
     pub last: u64,
+}
+
+/// Cursor position is established only by matching decoded index evidence.
+/// Cost observations choose navigation, never presentation-frame identity.
+#[derive(Default)]
+pub(crate) struct IndexedDecodeState {
+    pub next: Option<usize>,
+    frame_ns: Option<u128>,
+    restart_ns: Option<u128>,
+}
+impl IndexedDecodeState {
+    pub fn should_seek(&self, group: &SeekGroup, remaining_frames: u64) -> bool {
+        let Some(next) = self.next else {
+            return true;
+        };
+        if next as u64 > group.wanted[0] {
+            return true;
+        }
+        // Continuing must not spend the work budget on an avoidable gap.
+        if group.last.saturating_sub(next as u64).saturating_add(1) > remaining_frames {
+            return true;
+        }
+        let gap = group.anchor.saturating_sub(next) as u128;
+        if gap == 0 {
+            return false;
+        }
+        // A lazy decoder initialization or unusually expensive restart must not
+        // turn a sparse indexed request into a long prefix scan. Spend at most
+        // one region's local decode work on bridging its preceding gap.
+        let local_frames = group
+            .last
+            .saturating_sub(group.anchor as u64)
+            .saturating_add(1);
+        if gap > local_frames as u128 {
+            return true;
+        }
+        match (self.frame_ns, self.restart_ns) {
+            (Some(frame), Some(restart)) => frame.saturating_mul(gap) > restart,
+            _ => true,
+        }
+    }
+    pub fn observe_frame(&mut self, elapsed: Duration) {
+        Self::observe(&mut self.frame_ns, elapsed);
+    }
+    pub fn observe_restart(&mut self, elapsed: Duration) {
+        Self::observe(&mut self.restart_ns, elapsed);
+    }
+    fn observe(cost: &mut Option<u128>, elapsed: Duration) {
+        let sample = elapsed.as_nanos().max(1);
+        *cost = Some(cost.map_or(sample, |previous| (previous / 2 + sample / 2).max(1)));
+    }
 }
 impl VideoIndex {
     /// Established source identity/version; private adapter identities stay redacted.
@@ -240,10 +299,6 @@ impl VideoIndex {
                 })?)
                 .ok_or_else(|| Error::unsupported("no verified random-access anchor"))?;
             groups.entry(anchor).or_default().push(selected.ordinal);
-        }
-        if groups.len() > limits.max_seeks {
-            return Err(Error::exhausted("indexed batch exceeds its seek limit")
-                .with_constraint("indexed_seeks"));
         }
         let groups = groups
             .into_iter()
@@ -491,4 +546,51 @@ pub(crate) fn prepare_build(
         ));
     }
     Ok((fingerprint, reservation))
+}
+
+#[cfg(test)]
+mod navigation_tests {
+    use super::*;
+
+    #[test]
+    fn observed_restart_cost_avoids_short_gaps_but_work_limits_and_rewinds_take_priority() {
+        let mut state = IndexedDecodeState {
+            next: Some(10),
+            ..Default::default()
+        };
+        state.observe_frame(Duration::from_millis(1));
+        state.observe_restart(Duration::from_millis(8));
+        let nearby = SeekGroup {
+            anchor: 12,
+            wanted: vec![14],
+            last: 14,
+        };
+        assert!(!state.should_seek(&nearby, 20));
+        let distant = SeekGroup {
+            anchor: 30,
+            wanted: vec![35],
+            last: 35,
+        };
+        assert!(state.should_seek(&distant, 100));
+        state.observe_restart(Duration::from_secs(10));
+        assert!(
+            state.should_seek(&distant, 100),
+            "a startup outlier cannot justify walking a large sparse gap"
+        );
+        assert!(
+            state.should_seek(&nearby, 4),
+            "continuing cannot burn a limited frame budget on the gap"
+        );
+        let backwards = SeekGroup {
+            anchor: 0,
+            wanted: vec![5],
+            last: 5,
+        };
+        assert!(state.should_seek(&backwards, 100));
+        state.next = None;
+        assert!(
+            state.should_seek(&nearby, 100),
+            "unverified cursor positions always realign"
+        );
+    }
 }

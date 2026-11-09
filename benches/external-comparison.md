@@ -47,7 +47,7 @@ All variants use preloaded encoded bytes. File reading, handle construction and 
 | Variant | Fresh scope | Warm scope |
 |---|---|---|
 | `media-prefix` | Fresh decoder each request; context and encoded input retained | Same behavior; retained context, no reusable decoder claim |
-| `media-indexed` | Full decoded timing index built and charged on every request, followed by local GOP execution | Full index built in setup and retained; each request opens a **fresh decoder** using cached evidence |
+| `media-indexed` | Full decoded timing index built and charged on every request, followed by local GOP execution | Full index and reusable indexed reader opened in setup; the same decoder serves every batch |
 | `ffmpeg` / `ffmpeg-seek` | Fresh direct libavformat/libavcodec reader; keyframe seek + decode to exact PTS per unique target | Same live native reader; the same keyframe seeks and exact-PTS decode |
 | `ffmpeg-prefix` (optional) | Direct native prefix decode; fresh reader | Same live native reader, rewound to zero, prefix decoded again |
 | `media-cursor` (optional) | Direct facade reader prefix decode; fresh reader | Same live facade reader and seeks; explicit true-reader reuse control |
@@ -55,6 +55,15 @@ All variants use preloaded encoded bytes. File reading, handle construction and 
 | `dali` | Fresh Pipeline, index enabled, input fed for each request | Same Pipeline retained; internal decoder/index amortization is **unknown** |
 
 Disabling TorchCodec's otherwise-default NVDEC cache makes fresh decoder rows honest. A future recommended-default-cache experiment must carry another label. DALI initialization can defer input-dependent index work until `run()`, so its first execution retains that cost. These are useful reusable-object comparisons, but the objects have different lifetimes; the `reuse` column is mandatory when interpreting results.
+
+The committed November 3 measurements used `index+context;fresh-decoder` for warm
+`media-indexed`. Current runs use `index+context;same-indexed-reader`; historical
+rows are unchanged. Reusable indexed readers report per-batch decode/read/seek
+work, excluding constructor reads. Actual source reads are capped anew per batch,
+and retained AVIO buffers are not counted as new reads. Indexed navigation keeps
+the verified current position when continuing is cheaper than restarting, based
+on observed frame and seek-to-first-frame costs. Adjacent regions continue
+without flushing. Work/seek limits and decoded index checks still apply.
 
 Known native limits match across facade and direct paths: 20 retained surfaces, 32 MiB per surface, 512 MiB retained native payload, CUDA owned allocation limit 512 MiB. This accommodates dense16 at 4K; opaque decoder reference pools remain unmeasured. Codec threads and DALI pipeline threads are one. The default direct FFmpeg baseline sorts/deduplicates targets, seeks near every unique timestamp using the native keyframe-seek API, decodes to its exact source PTS, and restores caller order/repeats. It does not use a deliberately prefix-only baseline. Its per-target seeks do not share all preroll within a GOP, unlike the indexed facade schedule, so seek/decode counts remain essential. The direct FFmpeg CUDA baseline uses native FFmpeg libraries and the same native preprocessing/DLPack bridge, **not** a CLI path involving hwdownload.
 

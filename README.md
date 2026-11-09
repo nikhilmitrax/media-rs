@@ -153,7 +153,7 @@ let session = Session::default();
 let video = session.open("movie.mp4")?.video()?;
 let index = video.build_index(IndexBuildLimits::default())?;
 index.save("movie.media-index")?; // New file only; trusted local cache.
-let frames = video.with_index(index)
+let frames = video.clone().with_index(index.clone())
     .sample([Time::from_millis(9000), Time::from_millis(1000)])
     .duration_inference(DurationInference::NextTimestamp)
     .read()?;
@@ -168,6 +168,23 @@ are caller-trusted evidence, with checksums and source/track/policy validation.
 Cache version 2 also records compressed key-packet DTS for MPEG navigation;
 rebuild caches written by the earlier format. Presentation timestamps and global
 frame identities remain separate from the timestamp used to navigate a demuxer.
+
+For repeated batches, `indexed_reader()` retains a decoder as well as the index:
+
+```rust
+let mut reader = video.with_index(index)
+    .duration_inference(DurationInference::NextTimestamp)
+    .indexed_reader()?;
+let first = reader.read(&[Time::from_millis(1000), Time::from_millis(9000)])?;
+let second = reader.read(&[Time::from_millis(9100), Time::from_millis(9200)])?;
+```
+
+CPU and CUDA readers support this API. Each call validates the source and actual
+decoded timing, preserves caller order/repeats, and enforces its own work/read
+limits. Navigation uses measured decode/restart costs to avoid unnecessary seeks.
+Readers retain one codec admission until dropped; batches retain their own output
+leases. Any failed call closes the reader. Ordinary request/plan execution still
+opens an independent decoder each time.
 
 ## Building and testing
 
@@ -243,9 +260,7 @@ default features and exposes shared contracts and source/session APIs.
 
 ## Benchmarks
 
-Recorded on November 3, 2026, before the initial release. These are historical
-measurements of synthetic workflows; later compatibility fixes have not been
-rebenchmarked. Times are milliseconds, lower is better.
+Times are milliseconds, lower is better.
 
 ### CPU workflows
 
@@ -266,38 +281,34 @@ measurements show the wrapper cost for those workflows, not a general speedup.
 
 ### GPU video sampling
 
-4K H.264/HEVC, six-second 30 fps sources, centered 224×224 RGB f32 NCHW
-crops and the same simple CUDA consumer. Sparse requests select four frames
-with a repeat; dense requests select sixteen frames. Medians of five steady
-iterations; encoded input is already in memory and validation downloads are
-outside timing. Each complete comparison contains 384 numerically matched rows.
+Updated November 9, 2026: NVIDIA T4, two CPU cores, Torch 2.11.0+cu130 and
+TorchCodec 0.17.0+cu130. Six-second 4K H.264/HEVC sources, centered 224×224
+RGB f32 NCHW crops, identity resize and the same simple CUDA consumer. The
+source contract is BT709/Left with explicit point-chroma reconstruction.
+Sparse requests select four frames with a repeat; dense requests select sixteen.
 
-| GPU / reference | Source | Request | Prefix | Indexed | Reference |
-| --- | --- | --- | ---: | ---: | ---: |
-| A10G / TorchCodec 0.17 | H264 | sparse | 958.87 | 481.83 | 260.34 |
-| A10G / TorchCodec 0.17 | H264 | dense | 1045.91 | 1177.46 | 737.37 |
-| A10G / TorchCodec 0.17 | HEVC | sparse | 551.97 | 223.44 | 146.70 |
-| A10G / TorchCodec 0.17 | HEVC | dense | 602.23 | 476.26 | 406.01 |
-| T4 / DALI 2.3 | H264 | sparse | 889.87 | 503.82 | 1882.68 |
-| T4 / DALI 2.3 | H264 | dense | 969.82 | 1133.73 | 1073.71 |
-| T4 / DALI 2.3 | HEVC | sparse | 482.34 | 202.66 | 998.19 |
-| T4 / DALI 2.3 | HEVC | dense | 564.29 | 421.01 | 527.76 |
+Medians of five steady iterations after one initial use. Encoded input is already
+in memory; initial index construction and validation downloads are outside timing.
+The comparison contains 96 numerically matched rows.
 
-The two GPU comparisons use different source color contracts: BT709/Left with
-point chroma for TorchCodec, and BT601/Center with bilinear chroma for DALI.
-Their numbers cannot rank TorchCodec against DALI. Indexed requests reuse the
-timing index and context but open a fresh decoder; TorchCodec retains its decoder,
-and DALI retains its Pipeline with private decoder reuse unknown. Initial index
-construction is excluded here and can outweigh the benefit for a single request.
+| Source | Request | Prefix | Indexed | TorchCodec 0.17 |
+| --- | --- | ---: | ---: | ---: |
+| H264 | sparse | 1041.75 | 612.91 | 267.19 |
+| H264 | dense | 1119.93 | 1145.51 | 808.74 |
+| HEVC | sparse | 762.02 | 172.78 | 170.59 |
+| HEVC | dense | 814.34 | 464.52 | 469.72 |
 
-TorchCodec leads indexed media-rs in these cases. In the separate DALI task,
-indexed sparse reads are faster, while DALI leads dense H.264. There is no
-universal winner across codecs, request patterns and reuse scopes.
+The indexed path retains the timing index, context and actual decoder through
+`indexed_reader()`. TorchCodec retains its decoder with its global NVDEC cache
+disabled. Prefix requests open a fresh decoder each time. Setup is separate;
+initial index construction can outweigh the benefit for a single request.
 
-[Raw measurements and recorded environments](benches/measurements/2026-11-03/metadata.json),
+HEVC is approximately level with TorchCodec here; H264 remains slower.
+
+[Raw measurements and recorded environments](benches/measurements/2026-11-09/metadata.json),
 [CPU methodology](benches/README.md) and
-[GPU methodology and reproduction](benches/external-comparison.md) include the
-1080p rows, initial/fresh timings, decoded work, validation and memory limits.
+[GPU methodology and reproduction](benches/external-comparison.md) include source
+digests, setup costs, decoded work, validation and memory-accounting limits.
 
 ## Documentation and contributing
 
