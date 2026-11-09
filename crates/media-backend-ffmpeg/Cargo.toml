@@ -1,0 +1,24 @@
+[package]
+name = "media-backend-ffmpeg"
+description = "Native FFmpeg codecs, containers and CUDA surface integration"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+default = []
+linked = ["dep:ffmpeg-next"]
+audio = ["linked", "ffmpeg-next/software-resampling"]
+cuda = ["linked", "dep:media-backend-cuda"]
+cuda-filters = ["cuda", "ffmpeg-next/filter"]
+
+[dependencies]
+media-core.workspace = true
+media-io.workspace = true
+media-backend-cuda = { workspace = true, optional = true }
+ffmpeg-next = { workspace = true, optional = true }
+
+[lints]
+workspace = true

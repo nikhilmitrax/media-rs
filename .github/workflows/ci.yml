@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Format, Clippy, documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --exclude media-backend-ffmpeg --all-targets --features media/icc,media/http-tls,media/cuda,media-interop/ndarray --locked -- -D warnings
+      - run: cargo doc --workspace --exclude media-backend-ffmpeg --features media/icc,media/http-tls,media/cuda,media-interop/ndarray --no-deps --locked
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  check:
+    name: Check (${{ matrix.os }}, ${{ matrix.toolchain }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        toolchain: [stable]
+        include:
+          - os: ubuntu-latest
+            toolchain: 1.88.0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+      - run: cargo check --workspace --exclude media-backend-ffmpeg --all-targets --features media/icc,media/http-tls,media/cuda,media-interop/ndarray --locked
+      - run: cargo test --workspace --exclude media-backend-ffmpeg --features media/icc,media/http-tls,media/cuda,media-interop/ndarray --locked
+      - name: Minimal facade
+        run: cargo check -p media --no-default-features --locked
+      - name: Individual facade features
+        shell: bash
+        run: |
+          for feature in native cuda interop icc http http-tls; do
+            cargo check -p media --no-default-features --features "$feature" --locked
+          done
+
+  ffmpeg:
+    name: Native FFmpeg workflows (Linux)
+    runs-on: ubuntu-latest
+    env:
+      MEDIA_REQUIRE_FFMPEG_TESTS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Install native SDK and fixture generator
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang pkg-config ffmpeg libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavfilter-dev libswresample-dev
+      - run: cargo test --workspace --all-features --locked
+      - name: Individual linked facade features
+        run: |
+          for feature in ffmpeg ffmpeg-audio cuda-filters; do
+            cargo check -p media --no-default-features --all-targets --features "$feature" --locked
+          done
+      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - run: cargo doc --workspace --all-features --no-deps --locked
+        env:
+          RUSTDOCFLAGS: -D warnings

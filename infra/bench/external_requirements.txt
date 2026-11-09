@@ -1,0 +1,7 @@
+# Python 3.12, Linux x86_64. Install torch/torchcodec with --index-url
+# https://download.pytorch.org/whl/cu130; install remaining pins from PyPI.
+# Compatibility and release links: benches/external-comparison.md.
+torch==2.11.0
+torchcodec==0.17.0
+nvidia-dali-cuda120==2.3.0
+numpy==2.2.6

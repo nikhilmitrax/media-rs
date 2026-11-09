@@ -1,0 +1,20 @@
+[package]
+name = "media-io"
+description = "Source and destination adapter boundaries"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+default = []
+http = ["dep:ureq"]
+http-tls = ["http", "ureq/rustls"]
+
+[dependencies]
+media-core.workspace = true
+ureq = { workspace = true, optional = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,16 @@
+/target/
+/artifacts/
+/.cache/
+/.env
+/.env.*
+!/.env.example
+.DS_Store
+__pycache__/
+**/*.profraw
+**/*.profdata
+
+# Local design notes, reports, and historical benchmark archives.
+/rust_multimedia_design_plan.md
+/docs/
+/benches/baselines/
+/benches/results/

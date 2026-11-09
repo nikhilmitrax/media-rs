@@ -1,0 +1,49 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/media",
+    "crates/media-core",
+    "crates/media-io",
+    "crates/media-pipeline",
+    "crates/media-backend-native",
+    "crates/media-backend-ffmpeg",
+    "crates/media-backend-cuda",
+    "crates/media-interop",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+publish = false
+
+[workspace.dependencies]
+media-core = { path = "crates/media-core" }
+media-io = { path = "crates/media-io" }
+media-pipeline = { path = "crates/media-pipeline" }
+media-backend-native = { path = "crates/media-backend-native" }
+media-backend-ffmpeg = { path = "crates/media-backend-ffmpeg" }
+media-backend-cuda = { path = "crates/media-backend-cuda" }
+media-interop = { path = "crates/media-interop" }
+
+audioadapter-buffers = "5.2"
+cudarc = { version = "0.19.10", default-features = false, features = ["std", "driver", "nvrtc", "dynamic-loading", "cuda-12080"] }
+ffmpeg-next = { version = "9.0.0", default-features = false, features = ["codec", "format", "software-scaling"] }
+gif = "0.14.0"
+image = { version = "0.25.10", default-features = false }
+image-webp = "0.2.4"
+moxcms = { version = "0.8.1", features = ["extended_range"] }
+ndarray = "0.17.2"
+png = "0.18.1"
+rubato = "5.0.1"
+symphonia = { version = "0.6.1", default-features = false, features = ["all"] }
+tiff = "0.11.3"
+ureq = { version = "3.5.0", default-features = false }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+undocumented_unsafe_blocks = "deny"

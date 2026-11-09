@@ -1,0 +1,122 @@
+{
+  "files": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/e/ed/Marunouchi%2CTokyo_shoot_by_iPhone_5s.webm",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Marunouchi,Tokyo_shoot_by_iPhone_5s.webm",
+      "creator": "Kentaro",
+      "license": "CC BY 3.0",
+      "license_url": "https://creativecommons.org/licenses/by/3.0/",
+      "description": "Phone-shot footage edited in Final Cut Pro X; this Commons copy is VP9/Opus, not an original camera MOV. Two duplicate audio PTS cause real source overlap; explicit decoded-sample clock recovery is tested.",
+      "file": "iphone5s-tokyo.webm",
+      "bytes": 77180623,
+      "sha256": "e9b7fb6dfa292756d7d84fc11a56426f5b829437cfe8402d2f9bcb9cab5462ee",
+      "sha1": "036c3e848613ada9b51345a23174a5fb1d12a1d9",
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "vp9",
+            "codec_type": "video",
+            "width": 1280,
+            "height": 720,
+            "color_range": "tv",
+            "time_base": "1/1000",
+            "start_time": "0.007000"
+          },
+          {
+            "index": 1,
+            "codec_name": "opus",
+            "codec_type": "audio",
+            "sample_rate": "48000",
+            "time_base": "1/1000",
+            "start_time": "0.000000"
+          }
+        ],
+        "format": {
+          "duration": "132.743000"
+        }
+      }
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Wikimedia_Screencast.webm",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Wikimedia_Screencast.webm",
+      "creator": "Toolboxx8",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "description": "Authentic VP8/Vorbis desktop screencast; downloaded SHA-1 matches the Commons published checksum.",
+      "file": "wikimedia-screencast.webm",
+      "bytes": 3060157,
+      "sha256": "0cabfba7f372013acc1050fb98c4454d89cd88dc88214f092baae54f299270f3",
+      "sha1": "249a100e6ab27e55e0096162eafcbf97ee27a033",
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "vp8",
+            "codec_type": "video",
+            "width": 960,
+            "height": 720,
+            "time_base": "1/1000",
+            "start_time": "0.000000"
+          },
+          {
+            "index": 1,
+            "codec_name": "vorbis",
+            "codec_type": "audio",
+            "sample_rate": "44100",
+            "time_base": "1/1000",
+            "start_time": "-0.002000"
+          }
+        ],
+        "format": {
+          "duration": "87.126000"
+        }
+      }
+    },
+    {
+      "url": "https://media.w3.org/2010/05/sintel/trailer.mp4",
+      "source_page": "https://durian.blender.org/",
+      "creator": "Blender Foundation",
+      "license": "CC BY 3.0",
+      "license_url": "https://creativecommons.org/licenses/by/3.0/",
+      "description": "W3C-hosted H264/AAC edited-film trailer. Decoder priming establishes a later first audio sample than the declared header start.",
+      "file": "sintel-trailer.mp4",
+      "bytes": 4372373,
+      "sha256": "b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254",
+      "sha1": "9b678890fb8ca401c28e7ca09171ec008a154b97",
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 854,
+            "height": 480,
+            "time_base": "1/24",
+            "start_time": "0.000000",
+            "duration": "52.208333"
+          },
+          {
+            "index": 1,
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "sample_rate": "48000",
+            "time_base": "1/48000",
+            "start_time": "0.000000",
+            "duration": "51.946667"
+          }
+        ],
+        "format": {
+          "duration": "52.208333"
+        }
+      }
+    }
+  ],
+  "download_policy": "Explicit public, bounded downloads into ignored artifacts; no original media files are committed."
+}

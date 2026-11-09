@@ -1,0 +1,2 @@
+# Preserve the original bytes of recorded benchmark CSVs.
+benches/measurements/**/*.csv -text whitespace=cr-at-eol

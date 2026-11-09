@@ -1,0 +1,1548 @@
+{
+  "date": "2026-11-03",
+  "historical_measurements": true,
+  "note": "Measured before the initial release; later compatibility fixes are not rebenchmarked. Input filenames identify generated fixtures, not repository dependencies.",
+  "runs": {
+    "cpu": {
+      "raw_file": "cpu.csv",
+      "raw_sha256": "9a4526b2966c18edc215c4d58cfd0a93492a955bc875482e000b59d1e47a2aba",
+      "rows": 98,
+      "measured_source_sha256": "bca6947cc687b629f058852ae7046ba7aa2cac39f431b0e974a0c617843d2b23",
+      "fixture_generator": "infra/bench/generate_fixtures.py",
+      "fixture_generation": {
+        "generator": "infra/bench/generate_fixtures.py",
+        "python": "3.14.4",
+        "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+        "zlib": "1.2.12",
+        "ffmpeg": "ffmpeg version 8.1 Copyright (c) 2000-2026 the FFmpeg developers",
+        "video_command": [
+          "ffmpeg",
+          "-v",
+          "error",
+          "-nostdin",
+          "-y",
+          "-f",
+          "lavfi",
+          "-i",
+          "testsrc2=size=320x180:rate=30:duration=6",
+          "-itsoffset",
+          "0.25",
+          "-f",
+          "lavfi",
+          "-i",
+          "sine=frequency=440:sample_rate=48000:duration=6",
+          "-vf",
+          "scale=in_color_matrix=bt601:out_color_matrix=bt709:out_range=tv",
+          "-c:v",
+          "libx264",
+          "-threads:v",
+          "1",
+          "-preset",
+          "veryfast",
+          "-crf",
+          "22",
+          "-bf",
+          "2",
+          "-g",
+          "30",
+          "-pix_fmt",
+          "yuv420p",
+          "-color_primaries",
+          "bt709",
+          "-color_trc",
+          "bt709",
+          "-colorspace",
+          "bt709",
+          "-color_range",
+          "tv",
+          "-chroma_sample_location",
+          "left",
+          "-c:a",
+          "aac",
+          "-threads:a",
+          "1",
+          "-b:a",
+          "96000",
+          "artifacts/bench/fixtures/av6s.mp4"
+        ],
+        "files": {
+          "oriented.png": {
+            "bytes": 402222,
+            "sha256": "7a9114cd337847d836fc85bd0580d4aadc0c72b6ca39af6e9753566318bf3cd1"
+          },
+          "mono48k.wav": {
+            "bytes": 384044,
+            "sha256": "934160261f6680c64dfdeb459c262cb6713243cd36a7d2343fc0ab1e452a19fe"
+          },
+          "av6s.mp4": {
+            "bytes": 310874,
+            "sha256": "3c5ccbffe2b3f72f8d5edee0ef5babf6223e0fbe96901bb661daad134cf70d34"
+          }
+        },
+        "description": {
+          "image": "768x512 RGB8 PNG with sRGB and EXIF orientation6",
+          "audio": "4s mono PCM16 WAV at48000Hz, 440+1200Hz tones",
+          "video": "6s CFR30 H264320x180 BT709 limited + AAC48k delayed250ms"
+        }
+      },
+      "source_hashes": {
+        "Cargo.lock": "5e36ab1e52c44c1bdb35264a1b3b05e6438f11b25cd941bc62a31dfd1f83d777",
+        "crates/media/examples/matched_bench_bridge.rs": "db886c8cb64ead00dd5e17a8dff0e97d5ba80db8db7ccb5373a73fb2ec6bc318",
+        "crates/media/examples/workflow_bench.rs": "d32ba466662ba6c1a917fc4589db1cb2414f41f365da226746197017d7b74eba",
+        "infra/bench/external_workflow_bench.py": "2499c84679e14cbd8f7a26cab07d7a8e956541b519bf2cdaf51652c0d9521a1c",
+        "infra/bench/generate_external_fixtures.py": "fe4635e839113535ea24c8fd28f71f91aba5f629db7e2d38f82063452114a382"
+      },
+      "environment": {
+        "cpu": "Apple M4 Pro",
+        "physical_cores": 14,
+        "memory_gib": 48,
+        "os": "macOS 27.2 / aarch64",
+        "rust": "1.97.1",
+        "ffmpeg": "8.1"
+      },
+      "steady_samples_per_group": 6,
+      "timing": "end_to_end_ns includes open, probe, processing, consumer, retirement and finalization; iteration zero excluded"
+    },
+    "torchcodec-a10g": {
+      "raw_file": "torchcodec-a10g.csv",
+      "raw_sha256": "5b8282eca02c0572ebcb9eead779e358e36ac6910613bae467b00d74d92a62e9",
+      "rows": 384,
+      "measured_source_sha256": "e732beca25fcdb8837e6cee7edb2445b5a1ac8072569f3efeb77e5f33c56373e",
+      "fixture_generator": "infra/bench/generate_external_fixtures.py",
+      "fixture_generation": {
+        "generator": "infra/bench/generate_external_fixtures.py",
+        "fps": [
+          30,
+          1
+        ],
+        "seconds": 6,
+        "crop": [
+          224,
+          224
+        ],
+        "marker": {
+          "x": 40,
+          "y": 40,
+          "bit_stride": 16
+        },
+        "ffmpeg": "ffmpeg version 8.1 Copyright (c) 2000-2026 the FFmpeg developers",
+        "files": [
+          {
+            "file": "1080p-h264-gray.mp4",
+            "resolution": "1080p",
+            "width": 1920,
+            "height": 1080,
+            "codec": "h264",
+            "pattern": "gray",
+            "frames": 180,
+            "bytes": 141318,
+            "sha256": "9bb6d13572f3b1265b280f093a55a653ff0724ca8c6e15ecb3d738f30ff33e4b",
+            "command": [
+              "ffmpeg",
+              "-v",
+              "error",
+              "-nostdin",
+              "-y",
+              "-f",
+              "lavfi",
+              "-i",
+              "testsrc2=size=1920x1080:rate=30:duration=6",
+              "-vf",
+              "scale=in_color_matrix=bt601:out_color_matrix=bt709:out_range=tv,geq=lum='if(between(X,(W-224)/2+32,(W-224)/2+159)*between(Y,(H-224)/2+32,(H-224)/2+47),if(bitand(N,pow(2,floor((X-((W-224)/2+32))/16))),235,16),16+mod(floor(X/16)+floor(Y/16)+N,220))':cb='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,128)':cr='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,128)'",
+              "-an",
+              "-c:v",
+              "libx264",
+              "-threads",
+              "1",
+              "-preset",
+              "veryfast",
+              "-crf",
+              "18",
+              "-bf",
+              "2",
+              "-g",
+              "30",
+              "-pix_fmt",
+              "yuv420p",
+              "-x264-params",
+              "b-adapt=0:scenecut=0",
+              "-color_primaries",
+              "bt709",
+              "-color_trc",
+              "bt709",
+              "-colorspace",
+              "bt709",
+              "-color_range",
+              "tv",
+              "-chroma_sample_location",
+              "left",
+              "artifacts/bench/external-fixtures/1080p-h264-gray.mp4"
+            ],
+            "reference_frame_ids": [
+              0,
+              1,
+              63,
+              141,
+              179
+            ],
+            "metadata_patch": {
+              "original_sha256": "3e2857f01ac7f76739a68166c7f9e977ce5ee49742f56f63165bf0389d84be3e",
+              "patched_sha256": "9bb6d13572f3b1265b280f093a55a653ff0724ca8c6e15ecb3d738f30ff33e4b",
+              "command": [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-i",
+                "artifacts/bench/external-fixtures/1080p-h264-gray.mp4",
+                "-map",
+                "0:v:0",
+                "-c",
+                "copy",
+                "-bsf:v",
+                "h264_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1:video_full_range_flag=0:chroma_sample_loc_type=0",
+                "-color_primaries",
+                "bt709",
+                "-color_trc",
+                "bt709",
+                "-colorspace",
+                "bt709",
+                "-color_range",
+                "tv",
+                "-movflags",
+                "+write_colr",
+                "artifacts/bench/external-fixtures/metadata-ef5f069aecff41c99a8c952dafdb17da.mp4"
+              ],
+              "before_color": {
+                "stream": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                },
+                "frame": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                }
+              },
+              "decoded_yuv_frames": {
+                "frames": 180,
+                "sha256": "335e5a391c7a3c8b025ba25ab385d673605a2b912b8dfe165ec7e124323b0b86"
+              },
+              "decoded_yuv_unchanged": true
+            },
+            "verified_color": {
+              "stream": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              },
+              "frame": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              }
+            }
+          },
+          {
+            "file": "1080p-h264-color.mp4",
+            "resolution": "1080p",
+            "width": 1920,
+            "height": 1080,
+            "codec": "h264",
+            "pattern": "color",
+            "frames": 180,
+            "bytes": 6831127,
+            "sha256": "f4ce8bbf9c80984cf7cbb4dce0760eca6e672730f40bf493a771539ce0502896",
+            "command": [
+              "ffmpeg",
+              "-v",
+              "error",
+              "-nostdin",
+              "-y",
+              "-f",
+              "lavfi",
+              "-i",
+              "testsrc2=size=1920x1080:rate=30:duration=6",
+              "-vf",
+              "scale=in_color_matrix=bt601:out_color_matrix=bt709:out_range=tv,geq=lum='if(between(X,(W-224)/2+32,(W-224)/2+159)*between(Y,(H-224)/2+32,(H-224)/2+47),if(bitand(N,pow(2,floor((X-((W-224)/2+32))/16))),235,16),lum(X,Y))':cb='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cb(X,Y))':cr='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cr(X,Y))'",
+              "-an",
+              "-c:v",
+              "libx264",
+              "-threads",
+              "1",
+              "-preset",
+              "veryfast",
+              "-crf",
+              "18",
+              "-bf",
+              "2",
+              "-g",
+              "30",
+              "-pix_fmt",
+              "yuv420p",
+              "-x264-params",
+              "b-adapt=0:scenecut=0",
+              "-color_primaries",
+              "bt709",
+              "-color_trc",
+              "bt709",
+              "-colorspace",
+              "bt709",
+              "-color_range",
+              "tv",
+              "-chroma_sample_location",
+              "left",
+              "artifacts/bench/external-fixtures/1080p-h264-color.mp4"
+            ],
+            "reference_frame_ids": [
+              0,
+              1,
+              63,
+              141,
+              179
+            ],
+            "metadata_patch": {
+              "original_sha256": "7f882a19e4f57483be96c2a2deab6735648738d3f70d8a841294b01118df7808",
+              "patched_sha256": "f4ce8bbf9c80984cf7cbb4dce0760eca6e672730f40bf493a771539ce0502896",
+              "command": [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-i",
+                "artifacts/bench/external-fixtures/1080p-h264-color.mp4",
+                "-map",
+                "0:v:0",
+                "-c",
+                "copy",
+                "-bsf:v",
+                "h264_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1:video_full_range_flag=0:chroma_sample_loc_type=0",
+                "-color_primaries",
+                "bt709",
+                "-color_trc",
+                "bt709",
+                "-colorspace",
+                "bt709",
+                "-color_range",
+                "tv",
+                "-movflags",
+                "+write_colr",
+                "artifacts/bench/external-fixtures/metadata-5e985bcb844a44c08b7a552f03089061.mp4"
+              ],
+              "before_color": {
+                "stream": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                },
+                "frame": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                }
+              },
+              "decoded_yuv_frames": {
+                "frames": 180,
+                "sha256": "4bfc4b3fb8dadab8af508fb5be251e21224c37e737e822b4c3864d6539e15f35"
+              },
+              "decoded_yuv_unchanged": true
+            },
+            "verified_color": {
+              "stream": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              },
+              "frame": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              }
+            }
+          },
+          {
+            "file": "1080p-hevc-gray.mp4",
+            "resolution": "1080p",
+            "width": 1920,
+            "height": 1080,
+            "codec": "hevc",
+            "pattern": "gray",
+            "frames": 180,
+            "bytes": 77888,
+            "sha256": "5fb52db30f52d4241a669e357d76beac2778b4f9444b6a63a51b270e2fe27efc",
+            "command": [
+              "ffmpeg",
+              "-v",
+              "error",
+              "-nostdin",
+              "-y",
+              "-f",
+              "lavfi",
+              "-i",
+              "testsrc2=size=1920x1080:rate=30:duration=6",
+              "-vf",
+              "scale=in_color_matrix=bt601:out_color_matrix=bt709:out_range=tv,geq=lum='if(between(X,(W-224)/2+32,(W-224)/2+159)*between(Y,(H-224)/2+32,(H-224)/2+47),if(bitand(N,pow(2,floor((X-((W-224)/2+32))/16))),235,16),16+mod(floor(X/16)+floor(Y/16)+N,220))':cb='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,128)':cr='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,128)'",
+              "-an",
+              "-c:v",
+              "libx265",
+              "-threads",
+              "1",
+              "-preset",
+              "veryfast",
+              "-crf",
+              "18",
+              "-bf",
+              "2",
+              "-g",
+              "30",
+              "-pix_fmt",
+              "yuv420p",
+              "-x265-params",
+              "pools=none:frame-threads=1:wpp=0:b-adapt=0:scenecut=0:log-level=error",
+              "-color_primaries",
+              "bt709",
+              "-color_trc",
+              "bt709",
+              "-colorspace",
+              "bt709",
+              "-color_range",
+              "tv",
+              "-chroma_sample_location",
+              "left",
+              "artifacts/bench/external-fixtures/1080p-hevc-gray.mp4"
+            ],
+            "reference_frame_ids": [
+              0,
+              1,
+              63,
+              141,
+              179
+            ],
+            "metadata_patch": {
+              "original_sha256": "023c61ba27595b489fd84ce1e3b719b4cbff9ded00b24e4c0933f4c94bfbb65d",
+              "patched_sha256": "5fb52db30f52d4241a669e357d76beac2778b4f9444b6a63a51b270e2fe27efc",
+              "command": [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-i",
+                "artifacts/bench/external-fixtures/1080p-hevc-gray.mp4",
+                "-map",
+                "0:v:0",
+                "-c",
+                "copy",
+                "-bsf:v",
+                "hevc_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1:video_full_range_flag=0:chroma_sample_loc_type=0",
+                "-color_primaries",
+                "bt709",
+                "-color_trc",
+                "bt709",
+                "-colorspace",
+                "bt709",
+                "-color_range",
+                "tv",
+                "-movflags",
+                "+write_colr",
+                "artifacts/bench/external-fixtures/metadata-5268b33811a646eabce5518d5de1e402.mp4"
+              ],
+              "before_color": {
+                "stream": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                },
+                "frame": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                }
+              },
+              "decoded_yuv_frames": {
+                "frames": 180,
+                "sha256": "96460a3c6588ecd91c5fb1a864340a63f68f972a94ccfd93775b1065924e52f1"
+              },
+              "decoded_yuv_unchanged": true
+            },
+            "verified_color": {
+              "stream": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              },
+              "frame": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              }
+            }
+          },
+          {
+            "file": "1080p-hevc-color.mp4",
+            "resolution": "1080p",
+            "width": 1920,
+            "height": 1080,
+            "codec": "hevc",
+            "pattern": "color",
+            "frames": 180,
+            "bytes": 10666829,
+            "sha256": "be79a7e2d6674125fad76ad18b9f32ba9f3afb91eb7106ebc8db6a3d6d3cdd22",
+            "command": [
+              "ffmpeg",
+              "-v",
+              "error",
+              "-nostdin",
+              "-y",
+              "-f",
+              "lavfi",
+              "-i",
+              "testsrc2=size=1920x1080:rate=30:duration=6",
+              "-vf",
+              "scale=in_color_matrix=bt601:out_color_matrix=bt709:out_range=tv,geq=lum='if(between(X,(W-224)/2+32,(W-224)/2+159)*between(Y,(H-224)/2+32,(H-224)/2+47),if(bitand(N,pow(2,floor((X-((W-224)/2+32))/16))),235,16),lum(X,Y))':cb='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cb(X,Y))':cr='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cr(X,Y))'",
+              "-an",
+              "-c:v",
+              "libx265",
+              "-threads",
+              "1",
+              "-preset",
+              "veryfast",
+              "-crf",
+              "18",
+              "-bf",
+              "2",
+              "-g",
+              "30",
+              "-pix_fmt",
+              "yuv420p",
+              "-x265-params",
+              "pools=none:frame-threads=1:wpp=0:b-adapt=0:scenecut=0:log-level=error",
+              "-color_primaries",
+              "bt709",
+              "-color_trc",
+              "bt709",
+              "-colorspace",
+              "bt709",
+              "-color_range",
+              "tv",
+              "-chroma_sample_location",
+              "left",
+              "artifacts/bench/external-fixtures/1080p-hevc-color.mp4"
+            ],
+            "reference_frame_ids": [
+              0,
+              1,
+              63,
+              141,
+              179
+            ],
+            "metadata_patch": {
+              "original_sha256": "382207d396723af36f88e5090d25c6c7c65dd477cbbf0d09193ef2c3ed968193",
+              "patched_sha256": "be79a7e2d6674125fad76ad18b9f32ba9f3afb91eb7106ebc8db6a3d6d3cdd22",
+              "command": [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-i",
+                "artifacts/bench/external-fixtures/1080p-hevc-color.mp4",
+                "-map",
+                "0:v:0",
+                "-c",
+                "copy",
+                "-bsf:v",
+                "hevc_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1:video_full_range_flag=0:chroma_sample_loc_type=0",
+                "-color_primaries",
+                "bt709",
+                "-color_trc",
+                "bt709",
+                "-colorspace",
+                "bt709",
+                "-color_range",
+                "tv",
+                "-movflags",
+                "+write_colr",
+                "artifacts/bench/external-fixtures/metadata-eeb11772cac548bfb687c5ade624af10.mp4"
+              ],
+              "before_color": {
+                "stream": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                },
+                "frame": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                }
+              },
+              "decoded_yuv_frames": {
+                "frames": 180,
+                "sha256": "98032a0a245d8583e930d5c339f8b3bdb877251fc5c1f3eb6c8b5f94f655c0c3"
+              },
+              "decoded_yuv_unchanged": true
+            },
+            "verified_color": {
+              "stream": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              },
+              "frame": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              }
+            }
+          },
+          {
+            "file": "4k-h264-gray.mp4",
+            "resolution": "4k",
+            "width": 3840,
+            "height": 2160,
+            "codec": "h264",
+            "pattern": "gray",
+            "frames": 180,
+            "bytes": 407792,
+            "sha256": "86885f9313cedd1f1147984403cdc057d108b843a17409c4ff9760150a07e9e4",
+            "command": [
+              "ffmpeg",
+              "-v",
+              "error",
+              "-nostdin",
+              "-y",
+              "-f",
+              "lavfi",
+              "-i",
+              "testsrc2=size=3840x2160:rate=30:duration=6",
+              "-vf",
+              "scale=in_color_matrix=bt601:out_color_matrix=bt709:out_range=tv,geq=lum='if(between(X,(W-224)/2+32,(W-224)/2+159)*between(Y,(H-224)/2+32,(H-224)/2+47),if(bitand(N,pow(2,floor((X-((W-224)/2+32))/16))),235,16),16+mod(floor(X/16)+floor(Y/16)+N,220))':cb='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,128)':cr='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,128)'",
+              "-an",
+              "-c:v",
+              "libx264",
+              "-threads",
+              "1",
+              "-preset",
+              "veryfast",
+              "-crf",
+              "18",
+              "-bf",
+              "2",
+              "-g",
+              "30",
+              "-pix_fmt",
+              "yuv420p",
+              "-x264-params",
+              "b-adapt=0:scenecut=0",
+              "-color_primaries",
+              "bt709",
+              "-color_trc",
+              "bt709",
+              "-colorspace",
+              "bt709",
+              "-color_range",
+              "tv",
+              "-chroma_sample_location",
+              "left",
+              "artifacts/bench/external-fixtures/4k-h264-gray.mp4"
+            ],
+            "reference_frame_ids": [
+              0,
+              1,
+              63,
+              141,
+              179
+            ],
+            "metadata_patch": {
+              "original_sha256": "c37ba127cbabb0fe941eb8615d0a3f6712dc80b713e2c45026fee08a87173c2e",
+              "patched_sha256": "86885f9313cedd1f1147984403cdc057d108b843a17409c4ff9760150a07e9e4",
+              "command": [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-i",
+                "artifacts/bench/external-fixtures/4k-h264-gray.mp4",
+                "-map",
+                "0:v:0",
+                "-c",
+                "copy",
+                "-bsf:v",
+                "h264_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1:video_full_range_flag=0:chroma_sample_loc_type=0",
+                "-color_primaries",
+                "bt709",
+                "-color_trc",
+                "bt709",
+                "-colorspace",
+                "bt709",
+                "-color_range",
+                "tv",
+                "-movflags",
+                "+write_colr",
+                "artifacts/bench/external-fixtures/metadata-a7f25a730aab4e139dc4206e134502e7.mp4"
+              ],
+              "before_color": {
+                "stream": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                },
+                "frame": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                }
+              },
+              "decoded_yuv_frames": {
+                "frames": 180,
+                "sha256": "2a1b4e1813e0bb6abb229e198114e040bb6ed7b95bd5eef9121ff8b9ba29136f"
+              },
+              "decoded_yuv_unchanged": true
+            },
+            "verified_color": {
+              "stream": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              },
+              "frame": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              }
+            }
+          },
+          {
+            "file": "4k-h264-color.mp4",
+            "resolution": "4k",
+            "width": 3840,
+            "height": 2160,
+            "codec": "h264",
+            "pattern": "color",
+            "frames": 180,
+            "bytes": 25288620,
+            "sha256": "059a9d8e9b48c96c0b4ceaf0da340cb9fc82586437c797338ae637a0b8d36e61",
+            "command": [
+              "ffmpeg",
+              "-v",
+              "error",
+              "-nostdin",
+              "-y",
+              "-f",
+              "lavfi",
+              "-i",
+              "testsrc2=size=3840x2160:rate=30:duration=6",
+              "-vf",
+              "scale=in_color_matrix=bt601:out_color_matrix=bt709:out_range=tv,geq=lum='if(between(X,(W-224)/2+32,(W-224)/2+159)*between(Y,(H-224)/2+32,(H-224)/2+47),if(bitand(N,pow(2,floor((X-((W-224)/2+32))/16))),235,16),lum(X,Y))':cb='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cb(X,Y))':cr='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cr(X,Y))'",
+              "-an",
+              "-c:v",
+              "libx264",
+              "-threads",
+              "1",
+              "-preset",
+              "veryfast",
+              "-crf",
+              "18",
+              "-bf",
+              "2",
+              "-g",
+              "30",
+              "-pix_fmt",
+              "yuv420p",
+              "-x264-params",
+              "b-adapt=0:scenecut=0",
+              "-color_primaries",
+              "bt709",
+              "-color_trc",
+              "bt709",
+              "-colorspace",
+              "bt709",
+              "-color_range",
+              "tv",
+              "-chroma_sample_location",
+              "left",
+              "artifacts/bench/external-fixtures/4k-h264-color.mp4"
+            ],
+            "reference_frame_ids": [
+              0,
+              1,
+              63,
+              141,
+              179
+            ],
+            "metadata_patch": {
+              "original_sha256": "9c97e2892456df04e9d382dd21c2a401710936ab89bf8b6ce827fd67160c63b9",
+              "patched_sha256": "059a9d8e9b48c96c0b4ceaf0da340cb9fc82586437c797338ae637a0b8d36e61",
+              "command": [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-i",
+                "artifacts/bench/external-fixtures/4k-h264-color.mp4",
+                "-map",
+                "0:v:0",
+                "-c",
+                "copy",
+                "-bsf:v",
+                "h264_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1:video_full_range_flag=0:chroma_sample_loc_type=0",
+                "-color_primaries",
+                "bt709",
+                "-color_trc",
+                "bt709",
+                "-colorspace",
+                "bt709",
+                "-color_range",
+                "tv",
+                "-movflags",
+                "+write_colr",
+                "artifacts/bench/external-fixtures/metadata-649c0cdd49814fb89d601cbb3497ed41.mp4"
+              ],
+              "before_color": {
+                "stream": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                },
+                "frame": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                }
+              },
+              "decoded_yuv_frames": {
+                "frames": 180,
+                "sha256": "0f87a8fd742593444a44a9d0b786d8c1ccb168a17f803f812484174eb836d193"
+              },
+              "decoded_yuv_unchanged": true
+            },
+            "verified_color": {
+              "stream": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              },
+              "frame": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              }
+            }
+          },
+          {
+            "file": "4k-hevc-gray.mp4",
+            "resolution": "4k",
+            "width": 3840,
+            "height": 2160,
+            "codec": "hevc",
+            "pattern": "gray",
+            "frames": 180,
+            "bytes": 237791,
+            "sha256": "73365f9691999a4aa118acf892b48840221cd21eb255f3b8129b85bc9d1884e2",
+            "command": [
+              "ffmpeg",
+              "-v",
+              "error",
+              "-nostdin",
+              "-y",
+              "-f",
+              "lavfi",
+              "-i",
+              "testsrc2=size=3840x2160:rate=30:duration=6",
+              "-vf",
+              "scale=in_color_matrix=bt601:out_color_matrix=bt709:out_range=tv,geq=lum='if(between(X,(W-224)/2+32,(W-224)/2+159)*between(Y,(H-224)/2+32,(H-224)/2+47),if(bitand(N,pow(2,floor((X-((W-224)/2+32))/16))),235,16),16+mod(floor(X/16)+floor(Y/16)+N,220))':cb='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,128)':cr='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,128)'",
+              "-an",
+              "-c:v",
+              "libx265",
+              "-threads",
+              "1",
+              "-preset",
+              "veryfast",
+              "-crf",
+              "18",
+              "-bf",
+              "2",
+              "-g",
+              "30",
+              "-pix_fmt",
+              "yuv420p",
+              "-x265-params",
+              "pools=none:frame-threads=1:wpp=0:b-adapt=0:scenecut=0:log-level=error",
+              "-color_primaries",
+              "bt709",
+              "-color_trc",
+              "bt709",
+              "-colorspace",
+              "bt709",
+              "-color_range",
+              "tv",
+              "-chroma_sample_location",
+              "left",
+              "artifacts/bench/external-fixtures/4k-hevc-gray.mp4"
+            ],
+            "reference_frame_ids": [
+              0,
+              1,
+              63,
+              141,
+              179
+            ],
+            "metadata_patch": {
+              "original_sha256": "1f1fb2b22685b0c105e473668c009ff4a1e0027c193b510c187d226060727983",
+              "patched_sha256": "73365f9691999a4aa118acf892b48840221cd21eb255f3b8129b85bc9d1884e2",
+              "command": [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-i",
+                "artifacts/bench/external-fixtures/4k-hevc-gray.mp4",
+                "-map",
+                "0:v:0",
+                "-c",
+                "copy",
+                "-bsf:v",
+                "hevc_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1:video_full_range_flag=0:chroma_sample_loc_type=0",
+                "-color_primaries",
+                "bt709",
+                "-color_trc",
+                "bt709",
+                "-colorspace",
+                "bt709",
+                "-color_range",
+                "tv",
+                "-movflags",
+                "+write_colr",
+                "artifacts/bench/external-fixtures/metadata-f2d3c1d2ab354d45bb3357bccf0bb923.mp4"
+              ],
+              "before_color": {
+                "stream": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                },
+                "frame": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                }
+              },
+              "decoded_yuv_frames": {
+                "frames": 180,
+                "sha256": "7501b97817bbba38fcaf65c49071ca941b7db56518cc8ff74c26f765b88042cc"
+              },
+              "decoded_yuv_unchanged": true
+            },
+            "verified_color": {
+              "stream": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              },
+              "frame": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              }
+            }
+          },
+          {
+            "file": "4k-hevc-color.mp4",
+            "resolution": "4k",
+            "width": 3840,
+            "height": 2160,
+            "codec": "hevc",
+            "pattern": "color",
+            "frames": 180,
+            "bytes": 38057600,
+            "sha256": "695deaf34667aaaeb2504b264d2d74a9405b9856c45d1f9b7131993f96962e62",
+            "command": [
+              "ffmpeg",
+              "-v",
+              "error",
+              "-nostdin",
+              "-y",
+              "-f",
+              "lavfi",
+              "-i",
+              "testsrc2=size=3840x2160:rate=30:duration=6",
+              "-vf",
+              "scale=in_color_matrix=bt601:out_color_matrix=bt709:out_range=tv,geq=lum='if(between(X,(W-224)/2+32,(W-224)/2+159)*between(Y,(H-224)/2+32,(H-224)/2+47),if(bitand(N,pow(2,floor((X-((W-224)/2+32))/16))),235,16),lum(X,Y))':cb='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cb(X,Y))':cr='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cr(X,Y))'",
+              "-an",
+              "-c:v",
+              "libx265",
+              "-threads",
+              "1",
+              "-preset",
+              "veryfast",
+              "-crf",
+              "18",
+              "-bf",
+              "2",
+              "-g",
+              "30",
+              "-pix_fmt",
+              "yuv420p",
+              "-x265-params",
+              "pools=none:frame-threads=1:wpp=0:b-adapt=0:scenecut=0:log-level=error",
+              "-color_primaries",
+              "bt709",
+              "-color_trc",
+              "bt709",
+              "-colorspace",
+              "bt709",
+              "-color_range",
+              "tv",
+              "-chroma_sample_location",
+              "left",
+              "artifacts/bench/external-fixtures/4k-hevc-color.mp4"
+            ],
+            "reference_frame_ids": [
+              0,
+              1,
+              63,
+              141,
+              179
+            ],
+            "metadata_patch": {
+              "original_sha256": "0ea69cefc9761fa5d7a79c7365cd817a26895c85600c440d855b773eab9a4bd4",
+              "patched_sha256": "695deaf34667aaaeb2504b264d2d74a9405b9856c45d1f9b7131993f96962e62",
+              "command": [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-i",
+                "artifacts/bench/external-fixtures/4k-hevc-color.mp4",
+                "-map",
+                "0:v:0",
+                "-c",
+                "copy",
+                "-bsf:v",
+                "hevc_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1:video_full_range_flag=0:chroma_sample_loc_type=0",
+                "-color_primaries",
+                "bt709",
+                "-color_trc",
+                "bt709",
+                "-colorspace",
+                "bt709",
+                "-color_range",
+                "tv",
+                "-movflags",
+                "+write_colr",
+                "artifacts/bench/external-fixtures/metadata-0cd85ee18a9a46cca89d08fd66f8cb29.mp4"
+              ],
+              "before_color": {
+                "stream": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                },
+                "frame": {
+                  "color_range": "tv",
+                  "color_space": "bt709",
+                  "color_transfer": null,
+                  "color_primaries": null,
+                  "chroma_location": "left"
+                }
+              },
+              "decoded_yuv_frames": {
+                "frames": 180,
+                "sha256": "68385adff7abfbc4f6725325477b11dc1cef5dee44664bd993c147743108c85a"
+              },
+              "decoded_yuv_unchanged": true
+            },
+            "verified_color": {
+              "stream": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              },
+              "frame": {
+                "color_range": "tv",
+                "color_space": "bt709",
+                "color_transfer": "bt709",
+                "color_primaries": "bt709",
+                "chroma_location": "left"
+              }
+            }
+          }
+        ]
+      },
+      "source_hashes": {
+        "Cargo.lock": "5e36ab1e52c44c1bdb35264a1b3b05e6438f11b25cd941bc62a31dfd1f83d777",
+        "crates/media/examples/matched_bench_bridge.rs": "1d77e7dd3136a98a3e5b68a9809793f8b582119ef823a5fcc01c5189f0c24fae",
+        "crates/media/examples/workflow_bench.rs": "d32ba466662ba6c1a917fc4589db1cb2414f41f365da226746197017d7b74eba",
+        "infra/bench/external_workflow_bench.py": "74daf1a7ea5932842e4295bbf86b447a2686a401516ddb4e240e52c3acde091b",
+        "infra/bench/generate_external_fixtures.py": "7dc13e437e2399151a72409c5b4af7847de99d8e88576df7802373861e7cccc8"
+      },
+      "environment": {
+        "python": "3.12.1 (main, Jan  8 2024, 04:46:10) [Clang 17.0.6 ]",
+        "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.39",
+        "packages": {
+          "torch": "2.11.0+cu130",
+          "torchcodec": "0.17.0+cu130",
+          "nvidia-dali-cuda120": "2.3.0",
+          "numpy": "2.2.6"
+        },
+        "cuda": {
+          "name": "NVIDIA A10G",
+          "capability": [
+            8,
+            6
+          ],
+          "torch_cuda": "13.0"
+        },
+        "profile": "bt709-left",
+        "quality": "point-chroma",
+        "comparison": "center224;identity-resize;RGB-unit-f32-NCHW;8bit-grid;consumer=x*.5+.25",
+        "unknown": [
+          "opaque codec/driver memory",
+          "framework internal decoded-frame counts",
+          "driver-internal host/device crossings",
+          "DALI internal decoder reuse/index amortization"
+        ]
+      },
+      "driver": "610.57.04",
+      "steady_samples_per_group": 5,
+      "timing": "total_ns includes producer completion, common GPU consumer and retirement; validation downloads excluded; warm scope only in README"
+    },
+    "dali-t4": {
+      "raw_file": "dali-t4.csv",
+      "raw_sha256": "e786be6bd8a2adff237655ace94d842b38873eed60ee3bc1c18f9fbd2f559da6",
+      "rows": 384,
+      "measured_source_sha256": "831756f920801134af78b0c74e02b0681c1d2d4165f8969f551f38b838f52b4f",
+      "fixture_generator": "infra/bench/generate_external_fixtures.py",
+      "fixture_generation": {
+        "generator": "infra/bench/generate_external_fixtures.py",
+        "color_profile": "bt601-center",
+        "fps": [
+          30,
+          1
+        ],
+        "seconds": 6,
+        "crop": [
+          224,
+          224
+        ],
+        "marker": {
+          "x": 40,
+          "y": 40,
+          "bit_stride": 16
+        },
+        "ffmpeg": "ffmpeg version 8.1 Copyright (c) 2000-2026 the FFmpeg developers",
+        "files": [
+          {
+            "file": "1080p-h264-color-bt601-center.mp4",
+            "resolution": "1080p",
+            "width": 1920,
+            "height": 1080,
+            "codec": "h264",
+            "pattern": "color",
+            "color_profile": "bt601-center",
+            "frames": 180,
+            "bytes": 237955,
+            "sha256": "0183c1282aadb90b27d68336a2751f3e78d42419abd483d0c1aaab9a11a8d654",
+            "command": [
+              "ffmpeg",
+              "-v",
+              "error",
+              "-nostdin",
+              "-y",
+              "-f",
+              "lavfi",
+              "-i",
+              "testsrc=size=1920x1080:rate=30:duration=6",
+              "-vf",
+              "scale=out_color_matrix=bt601:out_range=tv:out_h_chr_pos=128:out_v_chr_pos=128,format=yuv420p,geq=lum='if(between(X,(W-224)/2+32,(W-224)/2+159)*between(Y,(H-224)/2+32,(H-224)/2+47),if(bitand(N,pow(2,floor((X-((W-224)/2+32))/16))),235,16),lum(X,Y))':cb='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cb(X,Y))':cr='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cr(X,Y))',setparams=range=limited:color_primaries=smpte170m:color_trc=smpte170m:colorspace=smpte170m",
+              "-an",
+              "-c:v",
+              "libx264",
+              "-threads",
+              "1",
+              "-preset",
+              "veryfast",
+              "-crf",
+              "18",
+              "-bf",
+              "2",
+              "-g",
+              "30",
+              "-pix_fmt",
+              "yuv420p",
+              "-x264-params",
+              "b-adapt=0:scenecut=0",
+              "-color_primaries",
+              "smpte170m",
+              "-color_trc",
+              "smpte170m",
+              "-colorspace",
+              "smpte170m",
+              "-color_range",
+              "tv",
+              "-chroma_sample_location",
+              "center",
+              "artifacts/bench/external-fixtures-bt601-center/1080p-h264-color-bt601-center.mp4"
+            ],
+            "reference_frame_ids": [
+              0,
+              1,
+              63,
+              141,
+              179
+            ],
+            "verified_color": {
+              "stream": {
+                "color_range": "tv",
+                "color_space": "smpte170m",
+                "color_transfer": "smpte170m",
+                "color_primaries": "smpte170m",
+                "chroma_location": "center"
+              },
+              "frame": {
+                "color_range": "tv",
+                "color_space": "smpte170m",
+                "color_transfer": "smpte170m",
+                "color_primaries": "smpte170m",
+                "chroma_location": "center"
+              }
+            }
+          },
+          {
+            "file": "1080p-hevc-color-bt601-center.mp4",
+            "resolution": "1080p",
+            "width": 1920,
+            "height": 1080,
+            "codec": "hevc",
+            "pattern": "color",
+            "color_profile": "bt601-center",
+            "frames": 180,
+            "bytes": 162679,
+            "sha256": "46f230096f2423108164517bfa301a72de3544fe907c6f9e1261eb86b9b55aa2",
+            "command": [
+              "ffmpeg",
+              "-v",
+              "error",
+              "-nostdin",
+              "-y",
+              "-f",
+              "lavfi",
+              "-i",
+              "testsrc=size=1920x1080:rate=30:duration=6",
+              "-vf",
+              "scale=out_color_matrix=bt601:out_range=tv:out_h_chr_pos=128:out_v_chr_pos=128,format=yuv420p,geq=lum='if(between(X,(W-224)/2+32,(W-224)/2+159)*between(Y,(H-224)/2+32,(H-224)/2+47),if(bitand(N,pow(2,floor((X-((W-224)/2+32))/16))),235,16),lum(X,Y))':cb='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cb(X,Y))':cr='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cr(X,Y))',setparams=range=limited:color_primaries=smpte170m:color_trc=smpte170m:colorspace=smpte170m",
+              "-an",
+              "-c:v",
+              "libx265",
+              "-threads",
+              "1",
+              "-preset",
+              "veryfast",
+              "-crf",
+              "18",
+              "-bf",
+              "2",
+              "-g",
+              "30",
+              "-pix_fmt",
+              "yuv420p",
+              "-x265-params",
+              "pools=none:frame-threads=1:wpp=0:b-adapt=0:scenecut=0:log-level=error",
+              "-color_primaries",
+              "smpte170m",
+              "-color_trc",
+              "smpte170m",
+              "-colorspace",
+              "smpte170m",
+              "-color_range",
+              "tv",
+              "-chroma_sample_location",
+              "center",
+              "artifacts/bench/external-fixtures-bt601-center/1080p-hevc-color-bt601-center.mp4"
+            ],
+            "reference_frame_ids": [
+              0,
+              1,
+              63,
+              141,
+              179
+            ],
+            "verified_color": {
+              "stream": {
+                "color_range": "tv",
+                "color_space": "smpte170m",
+                "color_transfer": "smpte170m",
+                "color_primaries": "smpte170m",
+                "chroma_location": "center"
+              },
+              "frame": {
+                "color_range": "tv",
+                "color_space": "smpte170m",
+                "color_transfer": "smpte170m",
+                "color_primaries": "smpte170m",
+                "chroma_location": "center"
+              }
+            }
+          },
+          {
+            "file": "4k-h264-color-bt601-center.mp4",
+            "resolution": "4k",
+            "width": 3840,
+            "height": 2160,
+            "codec": "h264",
+            "pattern": "color",
+            "color_profile": "bt601-center",
+            "frames": 180,
+            "bytes": 595903,
+            "sha256": "022cd85b3b9ea8fcf612b1c05dcff95ec0536ecd530cf6f168f3933545723e5b",
+            "command": [
+              "ffmpeg",
+              "-v",
+              "error",
+              "-nostdin",
+              "-y",
+              "-f",
+              "lavfi",
+              "-i",
+              "testsrc=size=3840x2160:rate=30:duration=6",
+              "-vf",
+              "scale=out_color_matrix=bt601:out_range=tv:out_h_chr_pos=128:out_v_chr_pos=128,format=yuv420p,geq=lum='if(between(X,(W-224)/2+32,(W-224)/2+159)*between(Y,(H-224)/2+32,(H-224)/2+47),if(bitand(N,pow(2,floor((X-((W-224)/2+32))/16))),235,16),lum(X,Y))':cb='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cb(X,Y))':cr='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cr(X,Y))',setparams=range=limited:color_primaries=smpte170m:color_trc=smpte170m:colorspace=smpte170m",
+              "-an",
+              "-c:v",
+              "libx264",
+              "-threads",
+              "1",
+              "-preset",
+              "veryfast",
+              "-crf",
+              "18",
+              "-bf",
+              "2",
+              "-g",
+              "30",
+              "-pix_fmt",
+              "yuv420p",
+              "-x264-params",
+              "b-adapt=0:scenecut=0",
+              "-color_primaries",
+              "smpte170m",
+              "-color_trc",
+              "smpte170m",
+              "-colorspace",
+              "smpte170m",
+              "-color_range",
+              "tv",
+              "-chroma_sample_location",
+              "center",
+              "artifacts/bench/external-fixtures-bt601-center/4k-h264-color-bt601-center.mp4"
+            ],
+            "reference_frame_ids": [
+              0,
+              1,
+              63,
+              141,
+              179
+            ],
+            "verified_color": {
+              "stream": {
+                "color_range": "tv",
+                "color_space": "smpte170m",
+                "color_transfer": "smpte170m",
+                "color_primaries": "smpte170m",
+                "chroma_location": "center"
+              },
+              "frame": {
+                "color_range": "tv",
+                "color_space": "smpte170m",
+                "color_transfer": "smpte170m",
+                "color_primaries": "smpte170m",
+                "chroma_location": "center"
+              }
+            }
+          },
+          {
+            "file": "4k-hevc-color-bt601-center.mp4",
+            "resolution": "4k",
+            "width": 3840,
+            "height": 2160,
+            "codec": "hevc",
+            "pattern": "color",
+            "color_profile": "bt601-center",
+            "frames": 180,
+            "bytes": 299083,
+            "sha256": "d0d2bfe9577861bea31977cff6ff97c808f2aa1121e6d5f4354ddca0a8bf66c3",
+            "command": [
+              "ffmpeg",
+              "-v",
+              "error",
+              "-nostdin",
+              "-y",
+              "-f",
+              "lavfi",
+              "-i",
+              "testsrc=size=3840x2160:rate=30:duration=6",
+              "-vf",
+              "scale=out_color_matrix=bt601:out_range=tv:out_h_chr_pos=128:out_v_chr_pos=128,format=yuv420p,geq=lum='if(between(X,(W-224)/2+32,(W-224)/2+159)*between(Y,(H-224)/2+32,(H-224)/2+47),if(bitand(N,pow(2,floor((X-((W-224)/2+32))/16))),235,16),lum(X,Y))':cb='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cb(X,Y))':cr='if(between(X,(W-112)/2+16,(W-112)/2+79)*between(Y,(H-112)/2+16,(H-112)/2+23),128,cr(X,Y))',setparams=range=limited:color_primaries=smpte170m:color_trc=smpte170m:colorspace=smpte170m",
+              "-an",
+              "-c:v",
+              "libx265",
+              "-threads",
+              "1",
+              "-preset",
+              "veryfast",
+              "-crf",
+              "18",
+              "-bf",
+              "2",
+              "-g",
+              "30",
+              "-pix_fmt",
+              "yuv420p",
+              "-x265-params",
+              "pools=none:frame-threads=1:wpp=0:b-adapt=0:scenecut=0:log-level=error",
+              "-color_primaries",
+              "smpte170m",
+              "-color_trc",
+              "smpte170m",
+              "-colorspace",
+              "smpte170m",
+              "-color_range",
+              "tv",
+              "-chroma_sample_location",
+              "center",
+              "artifacts/bench/external-fixtures-bt601-center/4k-hevc-color-bt601-center.mp4"
+            ],
+            "reference_frame_ids": [
+              0,
+              1,
+              63,
+              141,
+              179
+            ],
+            "verified_color": {
+              "stream": {
+                "color_range": "tv",
+                "color_space": "smpte170m",
+                "color_transfer": "smpte170m",
+                "color_primaries": "smpte170m",
+                "chroma_location": "center"
+              },
+              "frame": {
+                "color_range": "tv",
+                "color_space": "smpte170m",
+                "color_transfer": "smpte170m",
+                "color_primaries": "smpte170m",
+                "chroma_location": "center"
+              }
+            }
+          }
+        ]
+      },
+      "source_hashes": {
+        "Cargo.lock": "5e36ab1e52c44c1bdb35264a1b3b05e6438f11b25cd941bc62a31dfd1f83d777",
+        "crates/media/examples/matched_bench_bridge.rs": "1d77e7dd3136a98a3e5b68a9809793f8b582119ef823a5fcc01c5189f0c24fae",
+        "crates/media/examples/workflow_bench.rs": "d32ba466662ba6c1a917fc4589db1cb2414f41f365da226746197017d7b74eba",
+        "infra/bench/external_workflow_bench.py": "36048ff23d0b2a3240f8b543287252102f35b0be7302a1571e324a7c4fcf4e72",
+        "infra/bench/generate_external_fixtures.py": "7dc13e437e2399151a72409c5b4af7847de99d8e88576df7802373861e7cccc8"
+      },
+      "environment": {
+        "python": "3.12.1 (main, Jan  8 2024, 04:46:10) [Clang 17.0.6 ]",
+        "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.39",
+        "packages": {
+          "torch": "2.11.0+cu130",
+          "torchcodec": "0.17.0+cu130",
+          "nvidia-dali-cuda120": "2.3.0",
+          "numpy": "2.2.6"
+        },
+        "cuda": {
+          "name": "Tesla T4",
+          "capability": [
+            7,
+            5
+          ],
+          "torch_cuda": "13.0"
+        },
+        "profile": "bt601-center",
+        "quality": "native-bilinear",
+        "comparison": "center224;identity-resize;RGB-unit-f32-NCHW;8bit-grid;consumer=x*.5+.25",
+        "unknown": [
+          "opaque codec/driver memory",
+          "framework internal decoded-frame counts",
+          "driver-internal host/device crossings",
+          "DALI internal decoder reuse/index amortization"
+        ]
+      },
+      "driver": "610.57.04",
+      "steady_samples_per_group": 5,
+      "timing": "total_ns includes producer completion, common GPU consumer and retirement; validation downloads excluded; warm scope only in README"
+    }
+  }
+}

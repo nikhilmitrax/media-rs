@@ -1,0 +1,24 @@
+[package]
+name = "media-backend-native"
+description = "Native Rust image, color, animation and continuous audio processing"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+media-core.workspace = true
+media-io.workspace = true
+image = { workspace = true, features = ["png", "jpeg", "webp", "bmp", "gif", "tiff"] }
+moxcms.workspace = true
+tiff.workspace = true
+image-webp.workspace = true
+png.workspace = true
+gif.workspace = true
+symphonia.workspace = true
+rubato.workspace = true
+audioadapter-buffers.workspace = true
+
+[lints]
+workspace = true

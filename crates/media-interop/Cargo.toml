@@ -1,0 +1,27 @@
+[package]
+name = "media-interop"
+description = "Checked media, tensor and native allocation interoperability"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+media-core.workspace = true
+media-backend-cuda = { workspace = true, optional = true }
+image.workspace = true
+ndarray = { workspace = true, optional = true }
+moxcms = { workspace = true, optional = true }
+
+[features]
+default = []
+ndarray = ["dep:ndarray"]
+cuda = ["dep:media-backend-cuda"]
+icc = ["dep:moxcms"]
+
+[dev-dependencies]
+cudarc.workspace = true
+
+[lints]
+workspace = true
