@@ -439,8 +439,10 @@ fn sequential_animation_adapters_and_float_tiff_pages_remain_explicit_and_bounde
         .image
         .packed_bytes()
         .unwrap()
-        .chunks_exact(4)
-        .map(|bytes| f32::from_le_bytes(bytes.try_into().unwrap()))
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|bytes| f32::from_le_bytes(*bytes))
         .collect::<Vec<_>>();
     assert_eq!(values, vec![0.125, 1.25, -0.25]);
 }

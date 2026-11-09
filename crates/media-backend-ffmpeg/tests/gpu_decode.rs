@@ -112,7 +112,14 @@ fn generated_gpu_fixtures_decode_as_bt709_red_on_cpu() {
         let mut reader =
             VideoReader::open(&fixture.source(), VideoDecodeOptions::default()).unwrap();
         let frame = reader.next_frame().unwrap().unwrap();
-        for pixel in frame.image.packed_bytes().unwrap().chunks_exact(3) {
+        for pixel in frame
+            .image
+            .packed_bytes()
+            .unwrap()
+            .as_chunks::<3>()
+            .0
+            .iter()
+        {
             assert!(f32::from(pixel[0]) / 255. > 0.975, "red={}", pixel[0]);
             assert!(f32::from(pixel[1]) / 255. < 0.025, "green={}", pixel[1]);
             assert!(f32::from(pixel[2]) / 255. < 0.025, "blue={}", pixel[2]);

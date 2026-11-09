@@ -313,8 +313,10 @@ fn reference_audio(path: &Path) -> Vec<f32> {
             .args(["-map", "0:a:0", "-threads:a", "1", "-f", "f32le", "-"]),
     )
     .stdout
-    .chunks_exact(4)
-    .map(|b| f32::from_le_bytes(b.try_into().unwrap()))
+    .as_chunks::<4>()
+    .0
+    .iter()
+    .map(|b| f32::from_le_bytes(*b))
     .collect()
 }
 

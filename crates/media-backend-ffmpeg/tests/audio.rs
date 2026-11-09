@@ -67,8 +67,10 @@ impl Fixture {
         );
         output
             .stdout
-            .chunks_exact(4)
-            .map(|bytes| f32::from_le_bytes(bytes.try_into().unwrap()))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|bytes| f32::from_le_bytes(*bytes))
             .collect()
     }
 }
@@ -253,7 +255,7 @@ fn normalized_surround_pcm_retains_explicit_speaker_positions_and_sample_values(
     let mut frames = 0;
     while let Some(block) = reader.next_block().unwrap() {
         frames += block.frames();
-        for frame in block.samples().chunks_exact(6) {
+        for frame in block.samples().as_chunks::<6>().0 {
             assert_eq!(frame, &[0.1, 0.2, 0.3, 0.4, 0.5, 0.6]);
         }
     }

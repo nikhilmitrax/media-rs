@@ -19,8 +19,9 @@ provenance; no GPU is needed for ordinary native/contract checks.
 ## CPU checks
 
 Default native builds do not link FFmpeg. CI is configured for stable
-Linux/macOS/Windows and the Rust 1.88 floor. Recorded local runs cover macOS and
-Linux/Rust 1.88. FFmpeg checks require Clang/pkg-config, native development
+Linux/macOS and the Rust 1.88 floor. Windows is currently unsupported because
+file alias checks require Unix file identities. Recorded local runs cover macOS
+and Linux/Rust 1.88. FFmpeg checks require Clang/pkg-config, native development
 libraries, and the ffmpeg fixture generator.
 
 ```sh

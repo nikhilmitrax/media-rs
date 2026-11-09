@@ -53,8 +53,10 @@ fn padding_uses_exact_sixteen_bit_fill_and_reports_stale_geometry_metadata() {
         .image
         .packed_bytes()
         .unwrap()
-        .chunks_exact(2)
-        .map(|v| u16::from_le_bytes(v.try_into().unwrap()))
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|v| u16::from_le_bytes(*v))
         .collect::<Vec<_>>();
     for y in 0..3 {
         for x in 0..5 {

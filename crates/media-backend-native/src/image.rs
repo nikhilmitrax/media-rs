@@ -693,8 +693,10 @@ pub(crate) fn encoded_color(
                         return Err(Error::invalid("invalid PNG chromaticity chunk"));
                     }
                     chromaticities = Some(
-                        data.chunks_exact(4)
-                            .map(|v| u32::from_be_bytes(v.try_into().expect("four bytes")))
+                        data.as_chunks::<4>()
+                            .0
+                            .iter()
+                            .map(|v| u32::from_be_bytes(*v))
                             .collect::<Vec<_>>(),
                     );
                 }
@@ -887,13 +889,17 @@ fn to_dynamic(image: &Image) -> Result<DynamicImage> {
     }
     let u16s = || {
         bytes
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|v| u16::from_le_bytes([v[0], v[1]]))
             .collect::<Vec<_>>()
     };
     let f32s = || {
         bytes
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .map(|v| f32::from_le_bytes([v[0], v[1], v[2], v[3]]))
             .collect::<Vec<_>>()
     };

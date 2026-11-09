@@ -136,8 +136,10 @@ fn icc_conversion_matches_direct_moxcms_and_updates_output_interpretation() {
         .image
         .packed_bytes()
         .unwrap()
-        .chunks_exact(4)
-        .map(|v| f32::from_le_bytes(v.try_into().unwrap()))
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|v| f32::from_le_bytes(*v))
         .collect::<Vec<_>>();
     let mut reference = [0.; 3];
     let parsed =
@@ -380,8 +382,10 @@ fn floating_output_retains_extended_gamut_and_public_working_estimate_matches_gu
         .image
         .packed_bytes()
         .unwrap()
-        .chunks_exact(4)
-        .map(|v| f32::from_le_bytes(v.try_into().unwrap()))
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|v| f32::from_le_bytes(*v))
         .collect::<Vec<_>>();
     assert!(values[0] > 1.);
     assert!(values[1] < 0.);

@@ -38,6 +38,10 @@ impl DeviceBudget {
         self.limit
     }
     fn reserve(self: &Arc<Self>, bytes: usize) -> Result<Reservation> {
+        #[allow(
+            deprecated,
+            reason = "try_update requires a newer Rust than the 1.88 MSRV"
+        )]
         let previous = self
             .used
             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |used| {

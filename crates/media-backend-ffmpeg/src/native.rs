@@ -677,8 +677,8 @@ pub fn display_orientation(bytes: &[u8]) -> Result<media_core::media::Orientatio
         return Err(Error::invalid("invalid FFmpeg display-matrix payload"));
     }
     let mut matrix = [0i32; 9];
-    for (value, encoded) in matrix.iter_mut().zip(bytes.chunks_exact(4)) {
-        *value = i32::from_ne_bytes(encoded.try_into().expect("four-byte chunk"));
+    for (value, encoded) in matrix.iter_mut().zip(bytes.as_chunks::<4>().0.iter()) {
+        *value = i32::from_ne_bytes(*encoded);
     }
     if matrix[2] != 0 || matrix[5] != 0 || matrix[8] != 1 << 30 {
         return Err(Error::unsupported(

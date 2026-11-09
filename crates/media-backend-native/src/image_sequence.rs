@@ -264,7 +264,9 @@ fn webp_frames(
                 pixels
             } else {
                 pixels
-                    .chunks_exact(3)
+                    .as_chunks::<3>()
+                    .0
+                    .iter()
                     .flat_map(|p| [p[0], p[1], p[2], 255])
                     .collect()
             };

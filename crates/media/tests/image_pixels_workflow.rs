@@ -45,8 +45,10 @@ fn fluent_padding_and_exact_pixel_conversion_are_real_and_reusable() {
         .image
         .packed_bytes()
         .unwrap()
-        .chunks_exact(2)
-        .map(|v| u16::from_le_bytes(v.try_into().unwrap()))
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|v| u16::from_le_bytes(*v))
         .collect::<Vec<_>>();
     assert_eq!(
         &samples[9..],

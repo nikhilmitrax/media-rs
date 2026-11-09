@@ -169,7 +169,7 @@ fn known_partial_and_full_metadata_must_agree_with_actual_icc_colorimetry() {
 fn pitched_sixteen_bit_rgb_keeps_precision_through_profile_conversion_and_nhwc_packing() {
     let values = [20000_u16, 30000, 40000, 40000, 30000, 20000];
     let mut bytes = vec![99_u8; 16];
-    for (row, pixel) in values.chunks_exact(3).enumerate() {
+    for (row, pixel) in values.as_chunks::<3>().0.iter().enumerate() {
         for (channel, value) in pixel.iter().enumerate() {
             bytes[2 + row * 8 + channel * 2..4 + row * 8 + channel * 2]
                 .copy_from_slice(&value.to_le_bytes());

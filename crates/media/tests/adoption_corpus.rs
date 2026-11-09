@@ -146,8 +146,10 @@ fn check(path: &Path) {
     assert!(reference.status.success());
     let samples: Vec<_> = reference
         .stdout
-        .chunks_exact(4)
-        .map(|bytes| f32::from_le_bytes(bytes.try_into().unwrap()))
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|bytes| f32::from_le_bytes(*bytes))
         .collect();
     assert!(
         audio.samples() == samples,

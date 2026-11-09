@@ -13,7 +13,7 @@ hardware or runtime is unavailable when explicitly selected:
 cargo test -p media-backend-cuda --test hardware -- --ignored --test-threads=1
 ```
 
-Runtime requirements: Linux/Windows NVIDIA GPU with compute capability 7.5 or
+Runtime requirements: Linux NVIDIA GPU with compute capability 7.5 or
 newer, a CUDA 12.8-compatible host driver, and NVRTC 12.8 development libraries.
 On Linux the loader must find `libcuda.so.1`, `libnvrtc.so.12`, and NVRTC's matching
 builtins library. A CUDA 12.8.1 development image supplies NVRTC; the host supplies

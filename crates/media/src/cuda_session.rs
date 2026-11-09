@@ -150,6 +150,7 @@ impl CudaResources {
         if count == 0 {
             return Err(Error::invalid("codec reservation must be positive"));
         }
+        #[allow(deprecated, reason = "try_update requires a newer Rust than the 1.88 MSRV")]
         self.counters.codecs.fetch_update(Ordering::AcqRel, Ordering::Acquire,
             |used| used.checked_add(count).filter(|&next| next <= self.counters.limits.max_codec_sessions))
             .map_err(|_| Error::exhausted("Session CUDA codec slots are retained by active readers/transcodes or native frames")
@@ -161,6 +162,7 @@ impl CudaResources {
     }
     #[cfg(any(feature = "ffmpeg", test))]
     pub(crate) fn reserve_native(&self, bytes: usize) -> Result<NativeReservation> {
+        #[allow(deprecated, reason = "try_update requires a newer Rust than the 1.88 MSRV")]
         let previous = self.counters.bytes.fetch_update(Ordering::AcqRel, Ordering::Acquire,
             |used| used.checked_add(bytes).filter(|&next| next <= self.counters.limits.max_native_bytes))
             .map_err(|_| Error::exhausted("Session known CUDA native-surface byte budget is exhausted; release retained frames or reduce the transcode allowance")

@@ -150,6 +150,10 @@ impl HostBudget {
     }
     /// Acquire without waiting on application-held output leases.
     pub fn reserve(&self, bytes: usize) -> Result<HostReservation> {
+        #[allow(
+            deprecated,
+            reason = "try_update requires a newer Rust than the 1.88 MSRV"
+        )]
         let previous = self
             .0
             .current

@@ -381,8 +381,10 @@ pub fn encode_tiff(pages: &[ImagePage], options: TiffEncodeOptions) -> Result<En
                 PixelFormat::Gray16 | PixelFormat::GrayAlpha16 => {
                     let values = typed_samples(
                         bytes
-                            .chunks_exact(2)
-                            .map(|value| u16::from_le_bytes(value.try_into().expect("two bytes"))),
+                            .as_chunks::<2>()
+                            .0
+                            .iter()
+                            .map(|value| u16::from_le_bytes(*value)),
                         bytes.len() / 2,
                     )?;
                     tiff_page::<ct::Gray16>(&mut encoder, page, &values)?;
@@ -390,8 +392,10 @@ pub fn encode_tiff(pages: &[ImagePage], options: TiffEncodeOptions) -> Result<En
                 PixelFormat::Rgb16 | PixelFormat::Rgba16 => {
                     let values = typed_samples(
                         bytes
-                            .chunks_exact(2)
-                            .map(|value| u16::from_le_bytes(value.try_into().expect("two bytes"))),
+                            .as_chunks::<2>()
+                            .0
+                            .iter()
+                            .map(|value| u16::from_le_bytes(*value)),
                         bytes.len() / 2,
                     )?;
                     tiff_page::<ct::RGB16>(&mut encoder, page, &values)?;
@@ -399,8 +403,10 @@ pub fn encode_tiff(pages: &[ImagePage], options: TiffEncodeOptions) -> Result<En
                 PixelFormat::RgbF32 | PixelFormat::RgbaF32 => {
                     let values = typed_samples(
                         bytes
-                            .chunks_exact(4)
-                            .map(|value| f32::from_le_bytes(value.try_into().expect("four bytes"))),
+                            .as_chunks::<4>()
+                            .0
+                            .iter()
+                            .map(|value| f32::from_le_bytes(*value)),
                         bytes.len() / 4,
                     )?;
                     tiff_page::<ct::RGB32Float>(&mut encoder, page, &values)?;
@@ -646,7 +652,7 @@ fn gif_delay(value: Time) -> Result<u16> {
 }
 type GifPalette = (Vec<u8>, Vec<u8>, Option<u8>);
 fn gif_palette(bytes: &[u8], indexed: bool) -> Result<GifPalette> {
-    let transparent = bytes.chunks_exact(4).any(|pixel| pixel[3] == 0);
+    let transparent = bytes.as_chunks::<4>().0.iter().any(|pixel| pixel[3] == 0);
     let mut palette = if transparent {
         vec![0, 0, 0]
     } else {
@@ -659,7 +665,7 @@ fn gif_palette(bytes: &[u8], indexed: bool) -> Result<GifPalette> {
             .try_reserve_exact(bytes.len() / 4)
             .map_err(|_| Error::exhausted("cannot allocate GIF indices"))?;
     }
-    for pixel in bytes.chunks_exact(4) {
+    for pixel in bytes.as_chunks::<4>().0 {
         let index = match pixel[3] {
             0 => {
                 if pixel[..3] != [0, 0, 0] {

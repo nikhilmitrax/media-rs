@@ -513,7 +513,12 @@ fn transform(source: &ColorProfile, target: &ColorProfile, pixels: &[f32]) -> Re
         ));
     }
     // Alpha is coverage, never a tone-curve input. Preserve it independently.
-    for (src, dst) in pixels.chunks_exact(4).zip(output.chunks_exact_mut(4)) {
+    for (src, dst) in pixels
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .zip(output.as_chunks_mut::<4>().0.iter_mut())
+    {
         dst[3] = src[3];
     }
     Ok(output)
@@ -526,12 +531,16 @@ fn unpack(image: &Image, channels: usize) -> Result<Vec<f32>> {
             .map(|v| f32::from(*v) / 255.)
             .collect::<Vec<_>>(),
         PixelFormat::Rgb16 | PixelFormat::Rgba16 => bytes
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|v| f32::from(u16::from_le_bytes([v[0], v[1]])) / 65535.)
             .collect(),
         _ => bytes
-            .chunks_exact(4)
-            .map(|v| f32::from_le_bytes(v.try_into().expect("four bytes")))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|v| f32::from_le_bytes(*v))
             .collect(),
     };
     let mut output = Vec::with_capacity(image.width() as usize * image.height() as usize * 4);
@@ -564,7 +573,7 @@ fn pack(
     );
     let mut clipped = false;
     let mut bytes = Vec::new();
-    for pixel in pixels.chunks_exact(4) {
+    for pixel in pixels.as_chunks::<4>().0 {
         for (index, value) in pixel[..channels].iter().enumerate() {
             let mut value = if index == 3 {
                 value.clamp(0., 1.)
@@ -598,14 +607,14 @@ fn pack(
     Image::from_packed(width, height, source.pixel_format(), bytes)
 }
 fn associate(pixels: &mut [f32]) {
-    for p in pixels.chunks_exact_mut(4) {
+    for p in pixels.as_chunks_mut::<4>().0 {
         p[0] *= p[3];
         p[1] *= p[3];
         p[2] *= p[3];
     }
 }
 fn unassociate(pixels: &mut [f32]) {
-    for p in pixels.chunks_exact_mut(4) {
+    for p in pixels.as_chunks_mut::<4>().0 {
         let alpha = p[3];
         if alpha > 1e-8 {
             p[0] /= alpha;

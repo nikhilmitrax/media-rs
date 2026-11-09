@@ -190,6 +190,7 @@ opens an independent decoder each time.
 
 Rust 1.88 or newer is required (edition 2024). Default native operation needs no
 FFmpeg SDK or CUDA installation. Fetch dependencies once before offline checks.
+Supported platforms are Linux and macOS; Windows is currently unsupported.
 
 ```sh
 cargo test --workspace --exclude media-backend-ffmpeg --locked

@@ -237,6 +237,10 @@ impl CudaContext {
     }
 
     fn reserve_stream(&self) -> Result<()> {
+        #[allow(
+            deprecated,
+            reason = "try_update requires a newer Rust than the 1.88 MSRV"
+        )]
         self.inner
             .stream_count
             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |count| {
