@@ -14,6 +14,10 @@ The core workflows are implemented and usable. The API is still experimental,
 and developer documentation is a work in progress. Start with the examples below
 and the [runnable examples](crates/media/examples/README.md).
 
+## AI Usage Disclosure
+- Manually designed API with AI agents largely writing the code.
+- Tested manually and via agents.
+
 ## Current Features
 
 | Path | Current implementation |
